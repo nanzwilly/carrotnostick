@@ -494,24 +494,14 @@ function ChildStarDisplay({
   total: number
   color: string
 }) {
-  // Scale star size so all stars fit on the back of the hand
-  const starSize =
-    total <= 5  ? "1.05rem" :
-    total <= 10 ? "0.85rem" :
-    total <= 20 ? "0.68rem" :
-                  "0.52rem"
-
   return (
     <div className="flex flex-col items-center gap-3 py-2">
       {/* 🤚 Back-of-hand — same size for every goal */}
       <div className="relative w-20 h-20 flex items-center justify-center">
-        {/* The hand */}
-        <span className="text-7xl leading-none select-none" aria-hidden>🤚</span>
-
-        {/* Stars drawn in pen on the back */}
+        {/* Stars drawn in pen — behind the hand */}
         <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ paddingTop: "10px" }}
+          className="absolute inset-0 flex items-center justify-center z-0"
+          style={{ paddingTop: "8px" }}
         >
           <div
             className="flex flex-wrap justify-center"
@@ -522,10 +512,9 @@ function ChildStarDisplay({
                 key={i}
                 className="leading-none select-none transition-all duration-300"
                 style={{
-                  fontSize: starSize,
-                  opacity: i < current ? 1 : 0.15,
+                  fontSize: "0.72rem",
+                  opacity: i < current ? 1 : 0.18,
                   filter: i < current ? `drop-shadow(0 0 2px ${color})` : "none",
-                  transform: i < current ? "scale(1.08)" : "scale(1)",
                 }}
               >
                 {i < current ? "⭐" : "✩"}
@@ -533,6 +522,15 @@ function ChildStarDisplay({
             ))}
           </div>
         </div>
+
+        {/* Hand on top — semi-transparent so the drawn stars show through */}
+        <span
+          className="text-7xl leading-none select-none relative z-10"
+          style={{ opacity: 0.75 }}
+          aria-hidden
+        >
+          🤚
+        </span>
       </div>
 
       {/* Progress bar for goals with many stars (>10) */}
