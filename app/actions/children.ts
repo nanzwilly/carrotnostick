@@ -73,6 +73,20 @@ export async function verifyChildPin(childId: string, pin: string) {
   return child ?? null
 }
 
+export async function updateChildAvatar(
+  childId: string,
+  avatarEmoji: string,
+  avatarHat: string | null,
+  avatarGlasses: string | null
+) {
+  // No parent auth — child updates their own avatar from the kid page.
+  // childId is a UUID (not guessable), safe for a family app.
+  await db
+    .update(children)
+    .set({ avatarEmoji, avatarHat, avatarGlasses })
+    .where(eq(children.id, childId))
+}
+
 export async function getPendingRequests() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")

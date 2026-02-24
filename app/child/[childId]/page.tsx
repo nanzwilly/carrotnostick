@@ -1,11 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import { verifyChildPin } from "@/app/actions/children"
+import { verifyChildPin, updateChildAvatar } from "@/app/actions/children"
 import { createStarRequest } from "@/app/actions/stars"
 import type { Child, Goal, StarEvent, RewardRedemption, StarRequest } from "@/lib/schema"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import AvatarDisplay from "@/components/AvatarDisplay"
+
+const ANIMALS = ["🐱","🐶","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🦄","🐔","🐧","🦋","🐙","🦖","🐲"]
+const HATS    = ["🎩","👒","🎓","🪖","👑","🧢","🎅"]
+const GLASSES = ["🕶️","👓"]
 
 type GoalWithEvents = Goal & {
   starEvents: StarEvent[]
@@ -26,6 +31,13 @@ export default function ChildPage() {
   // Track which goals this kid has already nudged this session
   const [nudgedGoals, setNudgedGoals] = useState<Set<string>>(new Set())
 
+  // Avatar editor
+  const [showAvatarEditor, setShowAvatarEditor] = useState(false)
+  const [editAnimal, setEditAnimal] = useState("")
+  const [editHat, setEditHat] = useState<string | null>(null)
+  const [editGlasses, setEditGlasses] = useState<string | null>(null)
+  const [avatarSaving, setAvatarSaving] = useState(false)
+
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
@@ -40,6 +52,9 @@ export default function ChildPage() {
           .map((g) => g.id)
       )
       setNudgedGoals(alreadyNudged)
+      setEditAnimal(c.avatarEmoji)
+      setEditHat(c.avatarHat ?? null)
+      setEditGlasses(c.avatarGlasses ?? null)
       setChild(c)
     } else {
       setError("Wrong PIN. Try again!")
@@ -99,10 +114,108 @@ export default function ChildPage() {
       <div className="max-w-sm mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-1">
-          <div className="text-6xl">{child.avatarEmoji}</div>
+          <button
+            onClick={() => setShowAvatarEditor(true)}
+            className="relative inline-block focus:outline-none group"
+            title="Tap to change your look!"
+          >
+            <AvatarDisplay animal={editAnimal || child.avatarEmoji} hat={editHat} glasses={editGlasses} size="xl" />
+            <span className="absolute -bottom-1 -right-1 bg-white border border-gray-200 rounded-full text-sm px-1.5 py-0.5 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">✏️</span>
+          </button>
           <h1 className="text-3xl font-black text-gray-900">{child.name}</h1>
           <p className="text-gray-500 text-sm">Your stars ⭐</p>
         </div>
+
+        {/* Avatar editor modal */}
+        {showAvatarEditor && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-2 pb-0">
+            <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 space-y-5 max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">Your look 🎨</h2>
+                <button onClick={() => setShowAvatarEditor(false)} className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">✕</button>
+              </div>
+
+              {/* Preview */}
+              <div className="flex justify-center py-2">
+                <AvatarDisplay animal={editAnimal || child.avatarEmoji} hat={editHat} glasses={editGlasses} size="xl" />
+              </div>
+
+              {/* Animal picker */}
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-gray-700">🐾 Pick your animal</p>
+                <div className="flex flex-wrap gap-2">
+                  {ANIMALS.map((a) => (
+                    <button
+                      key={a}
+                      onClick={() => setEditAnimal(a)}
+                      className={`text-2xl p-2 rounded-xl transition-all ${editAnimal === a ? "bg-orange-100 ring-2 ring-orange-400 scale-110" : "hover:bg-gray-100"}`}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Hat picker */}
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-gray-700">🎩 Hat</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setEditHat(null)}
+                    className={`text-sm px-3 py-1.5 rounded-xl border transition-all ${editHat === null ? "bg-orange-100 border-orange-400 text-orange-700 font-bold" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                  >
+                    None
+                  </button>
+                  {HATS.map((h) => (
+                    <button
+                      key={h}
+                      onClick={() => setEditHat(h)}
+                      className={`text-2xl p-2 rounded-xl transition-all ${editHat === h ? "bg-orange-100 ring-2 ring-orange-400 scale-110" : "hover:bg-gray-100"}`}
+                    >
+                      {h}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Glasses picker */}
+              <div className="space-y-2">
+                <p className="text-sm font-semibold text-gray-700">🕶️ Glasses</p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setEditGlasses(null)}
+                    className={`text-sm px-3 py-1.5 rounded-xl border transition-all ${editGlasses === null ? "bg-orange-100 border-orange-400 text-orange-700 font-bold" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                  >
+                    None
+                  </button>
+                  {GLASSES.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setEditGlasses(g)}
+                      className={`text-2xl p-2 rounded-xl transition-all ${editGlasses === g ? "bg-orange-100 ring-2 ring-orange-400 scale-110" : "hover:bg-gray-100"}`}
+                    >
+                      {g}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                disabled={avatarSaving}
+                onClick={async () => {
+                  setAvatarSaving(true)
+                  await updateChildAvatar(child.id, editAnimal || child.avatarEmoji, editHat, editGlasses)
+                  setChild((prev) => prev ? { ...prev, avatarEmoji: editAnimal || prev.avatarEmoji, avatarHat: editHat, avatarGlasses: editGlasses } : prev)
+                  setAvatarSaving(false)
+                  setShowAvatarEditor(false)
+                }}
+                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-2xl py-3 transition-colors"
+              >
+                {avatarSaving ? "Saving…" : "Save my look! 🎉"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Goal cards */}
         {child.goals.length === 0 && (

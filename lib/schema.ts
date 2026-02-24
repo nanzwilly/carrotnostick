@@ -73,7 +73,9 @@ export const children = pgTable("children", {
   name: text("name").notNull(),
   pin: text("pin").notNull(), // 4-digit PIN (plaintext for MVP family app)
   color: text("color").notNull().default("#f97316"), // tailwind orange-500
-  avatarEmoji: text("avatar_emoji").notNull().default("🌟"),
+  avatarEmoji: text("avatar_emoji").notNull().default("🌟"), // animal base
+  avatarHat: text("avatar_hat"),          // optional hat accessory
+  avatarGlasses: text("avatar_glasses"),  // optional glasses accessory
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

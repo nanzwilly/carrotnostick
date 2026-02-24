@@ -4,6 +4,7 @@ import GoalCard from "@/components/GoalCard"
 import CopyLinkButton from "@/components/CopyLinkButton"
 import NudgeCard from "@/components/NudgeCard"
 import InviteButton from "@/components/InviteButton"
+import AvatarDisplay from "@/components/AvatarDisplay"
 
 export default async function DashboardPage({
   searchParams,
@@ -89,7 +90,7 @@ export default async function DashboardPage({
               style={{ backgroundColor: child.color + "20" }} // 12% opacity tint
             >
               <div className="flex items-center gap-3">
-                <span className="text-3xl">{child.avatarEmoji}</span>
+                <AvatarDisplay animal={child.avatarEmoji} hat={child.avatarHat} glasses={child.avatarGlasses} size="lg" />
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">{child.name}</h2>
                   <p className="text-xs text-gray-500">PIN: {child.pin}</p>
