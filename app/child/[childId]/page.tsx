@@ -494,43 +494,58 @@ function ChildStarDisplay({
   total: number
   color: string
 }) {
-  const useCompact = total > 10
+  // Scale star size so all stars fit on the back of the hand
+  const starSize =
+    total <= 5  ? "1.05rem" :
+    total <= 10 ? "0.85rem" :
+    total <= 20 ? "0.68rem" :
+                  "0.52rem"
 
   return (
     <div className="flex flex-col items-center gap-3 py-2">
-      {useCompact ? (
-        <div className="w-full space-y-2">
-          <div className="text-5xl text-center select-none">✋</div>
-          <div className="flex items-center gap-2 px-2">
-            <div className="flex-1 bg-gray-100 rounded-full h-4 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${Math.min((current / total) * 100, 100)}%`,
-                  backgroundColor: color,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="relative">
-          <div className="text-7xl select-none">✋</div>
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 flex gap-1">
+      {/* 🤚 Back-of-hand — same size for every goal */}
+      <div className="relative w-20 h-20 flex items-center justify-center">
+        {/* The hand */}
+        <span className="text-7xl leading-none select-none" aria-hidden>🤚</span>
+
+        {/* Stars drawn in pen on the back */}
+        <div
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ paddingTop: "10px" }}
+        >
+          <div
+            className="flex flex-wrap justify-center"
+            style={{ width: "3.6rem", gap: "2px" }}
+          >
             {Array.from({ length: total }).map((_, i) => (
               <span
                 key={i}
-                className={`text-lg transition-all duration-500 ${
-                  i < current ? "opacity-100" : "opacity-20"
-                }`}
+                className="leading-none select-none transition-all duration-300"
                 style={{
-                  transform: i < current ? "scale(1.2) translateY(-4px)" : "scale(1)",
-                  filter: i < current ? `drop-shadow(0 0 4px ${color})` : "none",
+                  fontSize: starSize,
+                  opacity: i < current ? 1 : 0.15,
+                  filter: i < current ? `drop-shadow(0 0 2px ${color})` : "none",
+                  transform: i < current ? "scale(1.08)" : "scale(1)",
                 }}
               >
-                ⭐
+                {i < current ? "⭐" : "✩"}
               </span>
             ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Progress bar for goals with many stars (>10) */}
+      {total > 10 && (
+        <div className="w-full px-4">
+          <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min((current / total) * 100, 100)}%`,
+                backgroundColor: color,
+              }}
+            />
           </div>
         </div>
       )}
