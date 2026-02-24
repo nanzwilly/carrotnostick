@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { verifyChildPin, updateChildAvatar } from "@/app/actions/children"
+import { verifyChildPin, updateChildAvatar, getSiblings } from "@/app/actions/children"
 import { createStarRequest } from "@/app/actions/stars"
 import type { Child, Goal, StarEvent, RewardRedemption, StarRequest } from "@/lib/schema"
 import { useParams } from "next/navigation"
@@ -18,6 +18,17 @@ type GoalWithEvents = Goal & {
   starRequests: StarRequest[]
 }
 type ChildWithGoals = Child & { goals: GoalWithEvents[] }
+
+type SiblingGoal = Goal & { starEvents: StarEvent[]; rewardRedemptions: RewardRedemption[] }
+type SiblingWithGoals = Child & { goals: SiblingGoal[] }
+
+// Total unredeemed stars across all active goals
+function computeTotalStars(goals: Array<{ starEvents: unknown[]; rewardRedemptions: unknown[]; starThreshold: number }>) {
+  return goals.reduce(
+    (sum, g) => sum + Math.max(0, g.starEvents.length - g.rewardRedemptions.length * g.starThreshold),
+    0
+  )
+}
 
 export default function ChildPage() {
   const params = useParams()
@@ -37,6 +48,21 @@ export default function ChildPage() {
   const [editHat, setEditHat] = useState<string | null>(null)
   const [editGlasses, setEditGlasses] = useState<string | null>(null)
   const [avatarSaving, setAvatarSaving] = useState(false)
+
+  // Leaderboard
+  const [showLeaderboard, setShowLeaderboard] = useState(false)
+  const [siblings, setSiblings] = useState<SiblingWithGoals[] | null>(null)
+  const [siblingsLoading, setSiblingsLoading] = useState(false)
+
+  const handleShowLeaderboard = async () => {
+    setShowLeaderboard(true)
+    if (siblings === null) {
+      setSiblingsLoading(true)
+      const data = await getSiblings(childId)
+      setSiblings(data as SiblingWithGoals[])
+      setSiblingsLoading(false)
+    }
+  }
 
   const handlePinSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -217,6 +243,97 @@ export default function ChildPage() {
           </div>
         )}
 
+        {/* Leaderboard modal */}
+        {showLeaderboard && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-2 pb-0">
+            <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">🏆 Leaderboard</h2>
+                <button
+                  onClick={() => setShowLeaderboard(false)}
+                  className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {siblingsLoading ? (
+                <div className="text-center py-8 text-gray-400 text-sm">Loading…</div>
+              ) : (siblings ?? []).length === 0 ? (
+                <div className="text-center py-8 space-y-3">
+                  <div className="text-5xl">🐣</div>
+                  <p className="text-gray-700 font-semibold">You&apos;re the only one!</p>
+                  <p className="text-gray-400 text-sm">No siblings yet. Enjoy having all the stars to yourself! 😄</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {[
+                    {
+                      id: child.id,
+                      name: child.name,
+                      avatarEmoji: editAnimal || child.avatarEmoji,
+                      avatarHat: editHat,
+                      avatarGlasses: editGlasses,
+                      color: child.color,
+                      totalStars: computeTotalStars(child.goals),
+                      isMe: true,
+                    },
+                    ...(siblings ?? []).map((s) => ({
+                      id: s.id,
+                      name: s.name,
+                      avatarEmoji: s.avatarEmoji,
+                      avatarHat: s.avatarHat,
+                      avatarGlasses: s.avatarGlasses,
+                      color: s.color,
+                      totalStars: computeTotalStars(s.goals),
+                      isMe: false,
+                    })),
+                  ]
+                    .sort((a, b) => b.totalStars - a.totalStars)
+                    .map((entry, index) => {
+                      const medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : `${index + 1}.`
+                      return (
+                        <div
+                          key={entry.id}
+                          className={`flex items-center gap-3 p-3 rounded-2xl transition-all ${
+                            entry.isMe
+                              ? "ring-2 ring-orange-400 bg-orange-50"
+                              : "bg-gray-50"
+                          }`}
+                        >
+                          <span className="text-2xl w-8 text-center shrink-0">{medal}</span>
+                          <AvatarDisplay
+                            animal={entry.avatarEmoji}
+                            hat={entry.avatarHat}
+                            glasses={entry.avatarGlasses}
+                            size="sm"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-gray-800 truncate">
+                              {entry.name}
+                              {entry.isMe && (
+                                <span className="text-orange-500 font-normal text-xs ml-1">(you)</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {entry.totalStars} star{entry.totalStars !== 1 ? "s" : ""} collected
+                            </p>
+                          </div>
+                          <span
+                            className="text-xl font-black shrink-0"
+                            style={{ color: entry.color }}
+                          >
+                            {entry.totalStars}⭐
+                          </span>
+                        </div>
+                      )
+                    })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Goal cards */}
         {child.goals.length === 0 && (
           <div className="bg-white rounded-3xl p-8 text-center text-gray-400">
@@ -249,6 +366,14 @@ export default function ChildPage() {
             />
           )
         })}
+
+        {/* Competition leaderboard button */}
+        <button
+          onClick={handleShowLeaderboard}
+          className="w-full bg-white border-2 border-yellow-300 hover:bg-yellow-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          🏆 See how the competition is doing
+        </button>
 
         <p className="text-center text-xs text-gray-400 pb-4">carrotnostick 🥕</p>
       </div>

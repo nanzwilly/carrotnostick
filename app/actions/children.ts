@@ -3,7 +3,7 @@
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { children } from "@/lib/schema"
-import { eq, and } from "drizzle-orm"
+import { eq, and, ne } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getOwnerIdForUser } from "@/lib/family"
 
@@ -118,4 +118,24 @@ export async function getPendingRequests() {
       }))
     )
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+}
+
+export async function getSiblings(childId: string) {
+  // No parent auth — childId is a UUID (not guessable), safe for a family app.
+  const me = await db.query.children.findFirst({
+    where: eq(children.id, childId),
+    columns: { parentId: true },
+  })
+  if (!me) return []
+
+  return db.query.children.findMany({
+    where: and(eq(children.parentId, me.parentId), ne(children.id, childId)),
+    with: {
+      goals: {
+        where: (g, { eq }) => eq(g.isActive, true),
+        with: { starEvents: true, rewardRedemptions: true },
+      },
+    },
+    orderBy: (c, { asc }) => [asc(c.createdAt)],
+  })
 }
