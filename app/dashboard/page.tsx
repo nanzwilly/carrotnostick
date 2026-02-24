@@ -3,8 +3,14 @@ import Link from "next/link"
 import GoalCard from "@/components/GoalCard"
 import CopyLinkButton from "@/components/CopyLinkButton"
 import NudgeCard from "@/components/NudgeCard"
+import InviteButton from "@/components/InviteButton"
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ invite?: string }>
+}) {
+  const { invite } = await searchParams
   const [childrenWithGoals, pendingRequests] = await Promise.all([
     getChildrenForParent(),
     getPendingRequests(),
@@ -12,6 +18,18 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
+      {/* Invite banners */}
+      {invite === "success" && (
+        <div className="bg-green-50 border border-green-200 text-green-800 rounded-2xl px-4 py-3 text-sm font-medium">
+          🎉 Co-parent joined successfully! They can now see and manage your family.
+        </div>
+      )}
+      {invite === "error" && (
+        <div className="bg-red-50 border border-red-200 text-red-800 rounded-2xl px-4 py-3 text-sm font-medium">
+          This invite link has already been used or has expired. Generate a new one to invite again.
+        </div>
+      )}
+
       {/* Nudges section */}
       {pendingRequests.length > 0 && (
         <div className="space-y-3">
@@ -32,12 +50,15 @@ export default async function DashboardPage() {
       {/* Page title */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Your family</h1>
-        <Link
-          href="/dashboard/new-child"
-          className="bg-orange-500 text-white rounded-full px-4 py-2 text-sm font-semibold hover:bg-orange-600 transition-colors"
-        >
-          + Add child
-        </Link>
+        <div className="flex items-center gap-2">
+          <InviteButton />
+          <Link
+            href="/dashboard/new-child"
+            className="bg-orange-500 text-white rounded-full px-4 py-2 text-sm font-semibold hover:bg-orange-600 transition-colors"
+          >
+            + Add child
+          </Link>
+        </div>
       </div>
 
       {/* Empty state */}

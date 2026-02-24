@@ -5,14 +5,16 @@ import { db } from "@/lib/db"
 import { goals, children } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { canAccessFamily, getOwnerIdForUser } from "@/lib/family"
 
-// ── Helper: verify goal belongs to the calling parent ────────────────────────
-async function verifyGoalOwnership(goalId: string, parentId: string) {
+// ── Helper: verify goal belongs to the calling parent (or co-parent) ─────────
+async function verifyGoalOwnership(goalId: string, userId: string) {
   const goal = await db.query.goals.findFirst({
     where: eq(goals.id, goalId),
     with: { child: true },
   })
-  if (!goal || goal.child.parentId !== parentId) throw new Error("Unauthorised")
+  if (!goal || !(await canAccessFamily(userId, goal.child.parentId)))
+    throw new Error("Unauthorised")
   return goal
 }
 
@@ -44,11 +46,12 @@ export async function createGoal(formData: FormData) {
   const starThreshold = parseInt(formData.get("starThreshold") as string) || 5
   const rewardDescription = formData.get("rewardDescription") as string
 
-  // Verify child belongs to this parent
+  // Verify child belongs to this parent (or the parent they're a co-parent of)
   const child = await db.query.children.findFirst({
     where: eq(children.id, childId),
   })
-  if (!child || child.parentId !== session.user.id) throw new Error("Unauthorised")
+  if (!child || !(await canAccessFamily(session.user.id, child.parentId)))
+    throw new Error("Unauthorised")
 
   const [goal] = await db
     .insert(goals)

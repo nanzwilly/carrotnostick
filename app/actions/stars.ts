@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { starEvents, rewardRedemptions, goals, children, starRequests } from "@/lib/schema"
 import { eq, and, count } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { canAccessFamily } from "@/lib/family"
 
 export async function giveStar(goalId: string, note?: string) {
   const session = await auth()
@@ -15,7 +16,8 @@ export async function giveStar(goalId: string, note?: string) {
     where: eq(goals.id, goalId),
     with: { child: true },
   })
-  if (!goal || goal.child.parentId !== session.user.id) throw new Error("Unauthorised")
+  if (!goal || !(await canAccessFamily(session.user.id, goal.child.parentId)))
+    throw new Error("Unauthorised")
 
   // Record the star
   await db.insert(starEvents).values({
@@ -51,7 +53,8 @@ export async function redeemReward(goalId: string) {
     where: eq(goals.id, goalId),
     with: { child: true },
   })
-  if (!goal || goal.child.parentId !== session.user.id) throw new Error("Unauthorised")
+  if (!goal || !(await canAccessFamily(session.user.id, goal.child.parentId)))
+    throw new Error("Unauthorised")
 
   await db.insert(rewardRedemptions).values({
     goalId,
@@ -93,7 +96,7 @@ export async function approveStarRequest(requestId: string) {
     where: eq(starRequests.id, requestId),
     with: { goal: { with: { child: true } } },
   })
-  if (!request || request.goal.child.parentId !== session.user.id)
+  if (!request || !(await canAccessFamily(session.user.id, request.goal.child.parentId)))
     throw new Error("Unauthorised")
 
   // Give the star
@@ -120,7 +123,7 @@ export async function dismissStarRequest(requestId: string) {
     where: eq(starRequests.id, requestId),
     with: { goal: { with: { child: true } } },
   })
-  if (!request || request.goal.child.parentId !== session.user.id)
+  if (!request || !(await canAccessFamily(session.user.id, request.goal.child.parentId)))
     throw new Error("Unauthorised")
 
   await db

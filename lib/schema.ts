@@ -127,6 +127,26 @@ export const starRequests = pgTable("star_requests", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 
+export const coParentInvites = pgTable("co_parent_invites", {
+  id:        uuid("id").primaryKey().defaultRandom(),
+  token:     text("token").notNull().unique(),
+  ownerId:   text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt:    timestamp("used_at"),
+  usedBy:    text("used_by").references(() => users.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+})
+
+export const coParents = pgTable(
+  "co_parents",
+  {
+    ownerId:    text("owner_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    coParentId: text("co_parent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    createdAt:  timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.ownerId, t.coParentId] })]
+)
+
 // ─── Relations ────────────────────────────────────────────────────────────────
 
 export const childrenRelations = relations(children, ({ many }) => ({
@@ -156,6 +176,15 @@ export const rewardRedemptionsRelations = relations(rewardRedemptions, ({ one })
   child: one(children, { fields: [rewardRedemptions.childId], references: [children.id] }),
 }))
 
+export const coParentInvitesRelations = relations(coParentInvites, ({ one }) => ({
+  owner: one(users, { fields: [coParentInvites.ownerId], references: [users.id] }),
+}))
+
+export const coParentsRelations = relations(coParents, ({ one }) => ({
+  owner:     one(users, { fields: [coParents.ownerId],    references: [users.id], relationName: "owner" }),
+  coParent:  one(users, { fields: [coParents.coParentId], references: [users.id], relationName: "coParent" }),
+}))
+
 // ─── Inferred types ───────────────────────────────────────────────────────────
 
 export type Child = typeof children.$inferSelect
@@ -163,3 +192,5 @@ export type Goal = typeof goals.$inferSelect
 export type StarEvent = typeof starEvents.$inferSelect
 export type RewardRedemption = typeof rewardRedemptions.$inferSelect
 export type StarRequest = typeof starRequests.$inferSelect
+export type CoParentInvite = typeof coParentInvites.$inferSelect
+export type CoParent = typeof coParents.$inferSelect

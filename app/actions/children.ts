@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { children } from "@/lib/schema"
 import { eq, and } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
+import { getOwnerIdForUser } from "@/lib/family"
 
 export async function createChild(formData: FormData) {
   const session = await auth()
@@ -19,9 +20,12 @@ export async function createChild(formData: FormData) {
     throw new Error("Invalid name or PIN")
   }
 
+  // Always attach the new child to the family owner (not the co-parent's own ID)
+  const ownerId = await getOwnerIdForUser(session.user.id)
+
   const [child] = await db
     .insert(children)
-    .values({ parentId: session.user.id, name, pin, avatarEmoji, color })
+    .values({ parentId: ownerId, name, pin, avatarEmoji, color })
     .returning()
 
   revalidatePath("/dashboard")
@@ -32,8 +36,10 @@ export async function getChildrenForParent() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")
 
+  const ownerId = await getOwnerIdForUser(session.user.id)
+
   return db.query.children.findMany({
-    where: eq(children.parentId, session.user.id),
+    where: eq(children.parentId, ownerId),
     with: {
       goals: {
         where: (goals, { eq }) => eq(goals.isActive, true),
@@ -71,8 +77,10 @@ export async function getPendingRequests() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")
 
+  const ownerId = await getOwnerIdForUser(session.user.id)
+
   const parentChildren = await db.query.children.findMany({
-    where: eq(children.parentId, session.user.id),
+    where: eq(children.parentId, ownerId),
     with: {
       starRequests: {
         where: (sr, { eq }) => eq(sr.status, "pending"),
