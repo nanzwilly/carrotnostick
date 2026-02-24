@@ -199,24 +199,24 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
 
       {/* ── Goal card ────────────────────────────────────────────────────────── */}
       <div ref={cardRef} className="px-6 py-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">{goal.emoji}</span>
-            <div>
-              <p className="font-semibold text-gray-800">{goal.name}</p>
-              <p className="text-xs text-gray-400">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <span className="text-xl shrink-0">{goal.emoji}</span>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-800 truncate">{goal.name}</p>
+              <p className="text-xs text-gray-400 truncate">
                 Reward: {goal.rewardDescription} · every {goal.starThreshold} stars
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {!rewardReached && (
               <button
                 ref={buttonRef}
                 onClick={handleGiveStar}
                 disabled={loading}
-                className="bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-full px-4 py-2 text-sm transition-colors flex items-center gap-1.5 shadow-sm"
+                className="bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-full px-4 py-2 text-sm transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
               >
                 {loading ? "…" : "⭐ Give star"}
               </button>
