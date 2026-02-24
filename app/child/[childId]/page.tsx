@@ -501,29 +501,30 @@ function ChildStarDisplay({
         {/* Hand */}
         <span className="text-7xl leading-none select-none" aria-hidden>🤚</span>
 
-        {/* Tiny stars drawn on the back — all contained within the hand */}
+        {/* Tiny black stars — absolutely centred on the palm */}
         <div
-          className="absolute inset-0 flex items-center justify-center"
-          style={{ paddingTop: "14px" }}
+          className="absolute flex flex-wrap justify-center"
+          style={{
+            width: "2.4rem",
+            gap: "1px",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
         >
-          <div
-            className="flex flex-wrap justify-center"
-            style={{ width: "2.6rem", gap: "1px" }}
-          >
-            {Array.from({ length: total }).map((_, i) => (
-              <span
-                key={i}
-                className="select-none transition-all duration-300"
-                style={{
-                  fontSize: "0.48rem",
-                  lineHeight: 1,
-                  color: i < current ? color : "#d1d5db",
-                }}
-              >
-                {i < current ? "★" : "☆"}
-              </span>
-            ))}
-          </div>
+          {Array.from({ length: total }).map((_, i) => (
+            <span
+              key={i}
+              className="select-none transition-all duration-300"
+              style={{
+                fontSize: "0.48rem",
+                lineHeight: 1,
+                color: i < current ? "#1a1a1a" : "#d1d5db",
+              }}
+            >
+              {i < current ? "★" : "☆"}
+            </span>
+          ))}
         </div>
       </div>
 
