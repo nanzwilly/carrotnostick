@@ -55,7 +55,7 @@ export default async function DashboardPage({
           <InviteButton />
           <Link
             href="/dashboard/new-child"
-            className="bg-orange-500 text-white rounded-full px-4 py-2 text-sm font-semibold hover:bg-orange-600 transition-colors"
+            className="bg-orange-500 text-white rounded-full px-4 py-2 text-sm font-semibold hover:bg-orange-600 transition-colors whitespace-nowrap text-center"
           >
             + Add child
           </Link>
