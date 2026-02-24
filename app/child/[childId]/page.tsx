@@ -498,39 +498,33 @@ function ChildStarDisplay({
     <div className="flex flex-col items-center gap-3 py-2">
       {/* 🤚 Back-of-hand — same size for every goal */}
       <div className="relative w-20 h-20 flex items-center justify-center">
-        {/* Stars drawn in pen — behind the hand */}
+        {/* Hand */}
+        <span className="text-7xl leading-none select-none" aria-hidden>🤚</span>
+
+        {/* Tiny stars drawn on the back — all contained within the hand */}
         <div
-          className="absolute inset-0 flex items-center justify-center z-0"
-          style={{ paddingTop: "8px" }}
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ paddingTop: "14px" }}
         >
           <div
             className="flex flex-wrap justify-center"
-            style={{ width: "3.6rem", gap: "2px" }}
+            style={{ width: "2.6rem", gap: "1px" }}
           >
             {Array.from({ length: total }).map((_, i) => (
               <span
                 key={i}
-                className="leading-none select-none transition-all duration-300"
+                className="select-none transition-all duration-300"
                 style={{
-                  fontSize: "0.72rem",
-                  opacity: i < current ? 1 : 0.18,
-                  filter: i < current ? `drop-shadow(0 0 2px ${color})` : "none",
+                  fontSize: "0.48rem",
+                  lineHeight: 1,
+                  color: i < current ? color : "#d1d5db",
                 }}
               >
-                {i < current ? "⭐" : "✩"}
+                {i < current ? "★" : "☆"}
               </span>
             ))}
           </div>
         </div>
-
-        {/* Hand on top — semi-transparent so the drawn stars show through */}
-        <span
-          className="text-7xl leading-none select-none relative z-10"
-          style={{ opacity: 0.75 }}
-          aria-hidden
-        >
-          🤚
-        </span>
       </div>
 
       {/* Progress bar for goals with many stars (>10) */}
