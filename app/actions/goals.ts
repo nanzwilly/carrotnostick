@@ -36,6 +36,48 @@ export async function deleteGoal(goalId: string) {
   revalidatePath("/dashboard")
 }
 
+export async function updateGoal(goalId: string, formData: FormData) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorised")
+  await verifyGoalOwnership(goalId, session.user.id)
+
+  const name = formData.get("name") as string
+  const emoji = (formData.get("emoji") as string) || "🎯"
+  const starThreshold = parseInt(formData.get("starThreshold") as string) || 5
+  const rewardDescription = formData.get("rewardDescription") as string
+
+  await db
+    .update(goals)
+    .set({ name, emoji, starThreshold, rewardDescription })
+    .where(eq(goals.id, goalId))
+
+  revalidatePath("/dashboard")
+}
+
+export async function getArchivedGoals(childId: string) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorised")
+
+  const child = await db.query.children.findFirst({ where: eq(children.id, childId) })
+  if (!child || !(await canAccessFamily(session.user.id, child.parentId)))
+    throw new Error("Unauthorised")
+
+  return db.query.goals.findMany({
+    where: (g, { and, eq }) => and(eq(g.childId, childId), eq(g.isActive, false)),
+    with: { starEvents: true, rewardRedemptions: true },
+    orderBy: (g, { desc }) => [desc(g.createdAt)],
+  })
+}
+
+export async function unarchiveGoal(goalId: string) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorised")
+  await verifyGoalOwnership(goalId, session.user.id)
+
+  await db.update(goals).set({ isActive: true }).where(eq(goals.id, goalId))
+  revalidatePath("/dashboard")
+}
+
 export async function createGoal(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")

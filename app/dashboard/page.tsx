@@ -124,6 +124,16 @@ export default async function DashboardPage({
                 <GoalCard key={goal.id} goal={goal} />
               ))}
             </div>
+
+            {/* Archived goals link */}
+            <div className="px-6 py-3 border-t border-gray-50">
+              <Link
+                href={`/dashboard/child/${child.id}/archived`}
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                📦 View archived goals
+              </Link>
+            </div>
           </div>
         )
       })}

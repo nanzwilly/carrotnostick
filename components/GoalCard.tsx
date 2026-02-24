@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react"
 import { giveStar, redeemReward } from "@/app/actions/stars"
-import { archiveGoal, deleteGoal } from "@/app/actions/goals"
+import { archiveGoal, deleteGoal, updateGoal } from "@/app/actions/goals"
 import StarDisplay from "./StarDisplay"
 import type { Goal, StarEvent, RewardRedemption } from "@/lib/schema"
 import { useRouter } from "next/navigation"
@@ -11,6 +11,8 @@ type GoalWithEvents = Goal & {
   starEvents: StarEvent[]
   rewardRedemptions: RewardRedemption[]
 }
+
+const GOAL_EMOJIS = ["🎯", "🍎", "📖", "🎨", "🏃", "🧹", "🌱", "💬", "🎵", "🤝", "🍕", "🦁", "🚀", "💪", "🌈"]
 
 const CONFETTI = [
   { emoji: "⭐", left: "8%",  duration: "1.2s", delay: "0s"    },
@@ -30,6 +32,10 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editEmoji, setEditEmoji] = useState(goal.emoji)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState("")
 
   const buttonRef = useRef<HTMLButtonElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -129,6 +135,23 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
     }
   }
 
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setEditLoading(true)
+    setEditError("")
+    const formData = new FormData(e.currentTarget)
+    formData.set("emoji", editEmoji)
+    try {
+      await updateGoal(goal.id, formData)
+      setShowEditModal(false)
+      router.refresh()
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setEditLoading(false)
+    }
+  }
+
   const handleArchive = async () => {
     setLoading(true)
     setMenuOpen(false)
@@ -197,6 +220,99 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
         </div>
       )}
 
+      {/* ── Edit Goal Modal ──────────────────────────────────────────────────── */}
+      {showEditModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-sm w-full space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-gray-900">Edit goal</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600 text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              {/* Emoji picker */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">Icon</label>
+                <div className="flex gap-2 flex-wrap">
+                  {GOAL_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setEditEmoji(emoji)}
+                      className={`text-xl p-1.5 rounded-xl transition-all ${
+                        editEmoji === emoji
+                          ? "bg-orange-100 ring-2 ring-orange-400 scale-110"
+                          : "hover:bg-gray-100"
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Name */}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Goal name</label>
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  defaultValue={goal.name}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                />
+              </div>
+              {/* Reward */}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Reward</label>
+                <input
+                  name="rewardDescription"
+                  type="text"
+                  required
+                  defaultValue={goal.rewardDescription}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300"
+                />
+              </div>
+              {/* Stars needed */}
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">Stars needed</label>
+                <input
+                  name="starThreshold"
+                  type="number"
+                  min={1}
+                  max={40}
+                  required
+                  defaultValue={goal.starThreshold}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-gray-900 focus:outline-none focus:ring-2 focus:ring-orange-300 text-center font-semibold"
+                />
+              </div>
+              {editError && (
+                <p className="text-sm text-red-500 bg-red-50 rounded-xl px-4 py-2">{editError}</p>
+              )}
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-2xl py-3 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editLoading}
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-2xl py-3 transition-colors"
+                >
+                  {editLoading ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── Goal card ────────────────────────────────────────────────────────── */}
       <div ref={cardRef} className="px-6 py-5 space-y-4">
         <div className="flex items-center justify-between gap-3">
@@ -233,6 +349,12 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
 
               {menuOpen && (
                 <div className="absolute right-0 top-9 bg-white border border-gray-100 rounded-2xl shadow-lg py-1.5 z-10 min-w-[140px]">
+                  <button
+                    onClick={() => { setMenuOpen(false); setEditEmoji(goal.emoji); setShowEditModal(true) }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    ✏️ Edit
+                  </button>
                   <button
                     onClick={handleArchive}
                     disabled={loading}
