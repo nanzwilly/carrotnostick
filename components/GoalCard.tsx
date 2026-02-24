@@ -314,41 +314,24 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
       )}
 
       {/* ── Goal card ────────────────────────────────────────────────────────── */}
-      <div ref={cardRef} className="px-6 py-5 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="text-xl shrink-0">{goal.emoji}</span>
-            <div className="min-w-0">
-              <p className="font-semibold text-gray-800 truncate">{goal.name}</p>
-              <p className="text-xs text-gray-400 truncate">
-                Reward: {goal.rewardDescription} · every {goal.starThreshold} stars
-              </p>
-            </div>
-          </div>
+      <div ref={cardRef} className="px-6 py-5 space-y-3">
 
-          <div className="flex items-center gap-2 shrink-0">
-            {!rewardReached && (
-              <button
-                ref={buttonRef}
-                onClick={handleGiveStar}
-                disabled={loading}
-                className="bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-full px-4 py-2 text-sm transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
-              >
-                {loading ? "…" : "⭐ Give star"}
-              </button>
-            )}
+        {/* Row 1: emoji + goal name + menu */}
+        <div className="flex items-center gap-2">
+          <span className="text-xl shrink-0">{goal.emoji}</span>
+          <p className="font-semibold text-gray-800 flex-1 min-w-0 truncate">{goal.name}</p>
 
-            {/* ··· menu */}
-            <div className="relative">
-              <button
-                onClick={() => { setMenuOpen(!menuOpen); setConfirmDelete(false) }}
-                className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-lg"
-              >
-                ···
-              </button>
+          {/* ··· menu */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => { setMenuOpen(!menuOpen); setConfirmDelete(false) }}
+              className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors text-lg"
+            >
+              ···
+            </button>
 
-              {menuOpen && (
-                <div className="absolute right-0 top-9 bg-white border border-gray-100 rounded-2xl shadow-lg py-1.5 z-10 min-w-[140px]">
+            {menuOpen && (
+              <div className="absolute right-0 top-9 bg-white border border-gray-100 rounded-2xl shadow-lg py-1.5 z-10 min-w-[140px]">
                   <button
                     onClick={() => { setMenuOpen(false); setEditEmoji(goal.emoji); setShowEditModal(true) }}
                     className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-2"
@@ -390,9 +373,25 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+            )}
           </div>
+        </div>
+
+        {/* Row 2: reward description + Give star button */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-400 flex-1 min-w-0 truncate">
+            Reward: {goal.rewardDescription} · every {goal.starThreshold} ⭐
+          </p>
+          {!rewardReached && (
+            <button
+              ref={buttonRef}
+              onClick={handleGiveStar}
+              disabled={loading}
+              className="bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-full px-4 py-2 text-sm transition-colors flex items-center gap-1.5 shadow-sm shrink-0 whitespace-nowrap"
+            >
+              {loading ? "…" : "⭐ Give star"}
+            </button>
+          )}
         </div>
 
         {/* Star display */}
