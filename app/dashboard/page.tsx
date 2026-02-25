@@ -87,17 +87,17 @@ export default async function DashboardPage({
           <div key={child.id} className="bg-white rounded-3xl shadow-sm overflow-hidden">
             {/* Child header */}
             <div
-              className="px-6 pt-7 pb-4 flex items-center justify-between"
+              className="px-6 pt-7 pb-4 flex flex-wrap items-center gap-x-3 gap-y-2"
               style={{ backgroundColor: child.color + "20" }} // 12% opacity tint
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
                 <AvatarDisplay animal={child.avatarEmoji} hat={child.avatarHat} glasses={child.avatarGlasses} avatarConfig={child.avatarConfig} size="xl" />
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-lg font-bold text-gray-900">{child.name}</h2>
                   <ChangeChildPinButton childId={child.id} childName={child.name} />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-auto shrink-0">
                 {/* Share link (copy to clipboard) */}
                 <CopyLinkButton url={childUrl} />
                 <Link

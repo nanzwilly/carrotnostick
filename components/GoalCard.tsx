@@ -326,9 +326,9 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
       <div ref={cardRef} className="px-6 py-5 space-y-3">
 
         {/* Row 1: emoji + goal name + menu */}
-        <div className="flex items-center gap-2">
-          <span className="text-xl shrink-0">{goal.emoji}</span>
-          <p className="font-semibold text-gray-800 flex-1 min-w-0 truncate">{goal.name}</p>
+        <div className="flex items-start gap-2">
+          <span className="text-xl shrink-0 mt-0.5">{goal.emoji}</span>
+          <p className="font-semibold text-gray-800 flex-1 min-w-0 line-clamp-2 leading-snug">{goal.name}</p>
 
           {/* ··· menu */}
           <div className="relative shrink-0">
