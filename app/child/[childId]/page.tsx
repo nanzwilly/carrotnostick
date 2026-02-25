@@ -151,8 +151,7 @@ export default function ChildPage() {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-xs text-center space-y-6">
           <div className="space-y-1">
-            <div className="text-5xl">🥕</div>
-            <h1 className="text-xl font-bold text-gray-900"><LogoText /></h1>
+            <h1 className="text-xl"><LogoText /></h1>
           </div>
           <p className="text-gray-500 text-sm">Enter your PIN to see your stars</p>
 
@@ -429,7 +428,7 @@ export default function ChildPage() {
           🏆 See how the competition is doing
         </button>
 
-        <p className="text-center text-xs text-gray-400 pb-4"><LogoText /> 🥕</p>
+        <p className="text-center text-xs text-gray-400 pb-4"><LogoText /></p>
       </div>
     </div>
   )

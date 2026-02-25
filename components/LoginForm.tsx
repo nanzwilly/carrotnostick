@@ -40,8 +40,7 @@ export default function LoginForm({
       <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center space-y-1">
-          <div className="text-6xl">🥕</div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h1 className="text-2xl">
             <LogoText />
           </h1>
           <p className="text-gray-500 text-sm">

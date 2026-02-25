@@ -24,10 +24,9 @@ export default async function DashboardLayout({
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Link
             href="/dashboard"
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center hover:opacity-80 transition-opacity"
           >
-            <span className="text-2xl">🥕</span>
-            <span className="font-bold text-gray-900 text-lg tracking-tight">
+            <span className="text-lg">
               <LogoText />
             </span>
           </Link>
