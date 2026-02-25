@@ -5,6 +5,7 @@ import CopyLinkButton from "@/components/CopyLinkButton"
 import NudgeCard from "@/components/NudgeCard"
 import InviteButton from "@/components/InviteButton"
 import AvatarDisplay from "@/components/AvatarDisplay"
+import ChangeChildPinButton from "@/components/ChangeChildPinButton"
 
 export default async function DashboardPage({
   searchParams,
@@ -93,7 +94,7 @@ export default async function DashboardPage({
                 <AvatarDisplay animal={child.avatarEmoji} hat={child.avatarHat} glasses={child.avatarGlasses} avatarConfig={child.avatarConfig} size="xl" />
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">{child.name}</h2>
-                  <p className="text-xs text-gray-500">PIN: {child.pin}</p>
+                  <ChangeChildPinButton childId={child.id} childName={child.name} />
                 </div>
               </div>
               <div className="flex items-center gap-2">

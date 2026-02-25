@@ -7,6 +7,12 @@ import { eq, and, ne } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getOwnerIdForUser } from "@/lib/family"
 import type { BigHeadConfig } from "@/components/BigHeadAvatar"
+import bcrypt from "bcryptjs"
+
+/** Check if a stored PIN value is a bcrypt hash (legacy plaintext PINs are not) */
+function isBcryptHash(value: string) {
+  return value.startsWith("$2b$") || value.startsWith("$2a$")
+}
 
 export async function createChild(formData: FormData) {
   const session = await auth()
@@ -17,20 +23,43 @@ export async function createChild(formData: FormData) {
   const avatarEmoji = (formData.get("avatarEmoji") as string) || "🌟"
   const color = (formData.get("color") as string) || "#f97316"
 
-  if (!name || !pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-    throw new Error("Invalid name or PIN")
+  if (!name || !pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+    throw new Error("PIN must be exactly 6 digits")
   }
 
   // Always attach the new child to the family owner (not the co-parent's own ID)
   const ownerId = await getOwnerIdForUser(session.user.id)
 
+  const hashedPin = await bcrypt.hash(pin, 10)
+
   const [child] = await db
     .insert(children)
-    .values({ parentId: ownerId, name, pin, avatarEmoji, color })
+    .values({ parentId: ownerId, name, pin: hashedPin, avatarEmoji, color })
     .returning()
 
   revalidatePath("/dashboard")
   return child
+}
+
+export async function updateChildPin(childId: string, pin: string) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorised")
+
+  if (!pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+    throw new Error("PIN must be exactly 6 digits")
+  }
+
+  // Verify the child belongs to this parent's family
+  const ownerId = await getOwnerIdForUser(session.user.id)
+  const child = await db.query.children.findFirst({
+    where: and(eq(children.id, childId), eq(children.parentId, ownerId)),
+    columns: { id: true },
+  })
+  if (!child) throw new Error("Child not found")
+
+  const hashedPin = await bcrypt.hash(pin, 10)
+  await db.update(children).set({ pin: hashedPin }).where(eq(children.id, childId))
+  revalidatePath("/dashboard")
 }
 
 export async function getChildrenForParent() {
@@ -55,8 +84,9 @@ export async function getChildrenForParent() {
 }
 
 export async function verifyChildPin(childId: string, pin: string) {
+  // Fetch the child first (we can't do a direct DB equality check on bcrypt hashes)
   const child = await db.query.children.findFirst({
-    where: and(eq(children.id, childId), eq(children.pin, pin)),
+    where: eq(children.id, childId),
     with: {
       goals: {
         where: (goals, { eq }) => eq(goals.isActive, true),
@@ -71,7 +101,14 @@ export async function verifyChildPin(childId: string, pin: string) {
       },
     },
   })
-  return child ?? null
+  if (!child) return null
+
+  // Dual-mode: bcrypt hash for new PINs, direct compare for legacy plaintext PINs
+  const valid = isBcryptHash(child.pin)
+    ? await bcrypt.compare(pin, child.pin)
+    : child.pin === pin
+
+  return valid ? child : null
 }
 
 export async function updateChildAvatar(

@@ -159,11 +159,11 @@ export default function ChildPage() {
             <input
               type="password"
               inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
+              pattern="\d{4,6}"
+              maxLength={6}
               value={pin}
               onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
-              placeholder="••••"
+              placeholder="••••••"
               required
               autoFocus
               className="w-full border-2 border-gray-200 focus:border-orange-400 rounded-2xl px-4 py-4 text-center text-3xl tracking-widest font-mono text-gray-900 focus:outline-none transition-colors"
@@ -171,7 +171,7 @@ export default function ChildPage() {
             {error && <p className="text-sm text-red-500 animate-bounce">{error}</p>}
             <button
               type="submit"
-              disabled={loading || pin.length !== 4}
+              disabled={loading || pin.length < 4}
               className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white font-bold rounded-2xl py-3 transition-colors text-lg"
             >
               {loading ? "…" : "Let me in ✨"}

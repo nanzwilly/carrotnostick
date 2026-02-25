@@ -109,17 +109,17 @@ export default function NewChildPage() {
           {/* PIN */}
           <div className="space-y-1.5">
             <label htmlFor="pin" className="text-sm font-medium text-gray-700">
-              4-digit PIN
+              6-digit PIN
             </label>
             <input
               id="pin"
               name="pin"
               type="text"
               inputMode="numeric"
-              pattern="\d{4}"
-              maxLength={4}
+              pattern="\d{6}"
+              maxLength={6}
               required
-              placeholder="e.g. 1234"
+              placeholder="e.g. 123456"
               className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 tracking-widest text-center text-lg font-mono"
             />
             <p className="text-xs text-gray-400">
