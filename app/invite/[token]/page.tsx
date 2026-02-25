@@ -1,6 +1,7 @@
 import { getInviteByToken } from "@/app/actions/invites"
 import { auth, signIn } from "@/auth"
 import { redirect } from "next/navigation"
+import InviteAuthForm from "./InviteAuthForm"
 
 export default async function InvitePage({
   params,
@@ -48,17 +49,13 @@ export default async function InvitePage({
             Join {ownerName}&apos;s family
           </h1>
           <p className="text-gray-500 text-sm mt-2">
-            Sign in with Google to see your children&apos;s goals and give stars together.
+            Sign in to see your children&apos;s goals and give stars together.
           </p>
         </div>
-        <form action={googleSignIn}>
-          <button
-            type="submit"
-            className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-2xl py-3 transition-colors"
-          >
-            Sign in with Google
-          </button>
-        </form>
+        <InviteAuthForm
+          googleSignIn={googleSignIn}
+          acceptUrl={`/invite/${token}/accept`}
+        />
       </div>
     </div>
   )
