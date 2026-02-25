@@ -526,27 +526,28 @@ function GoalCard({
   )
 }
 
-// ── Star hand display ─────────────────────────────────────────────────────────
+// ── Star display ──────────────────────────────────────────────────────────────
 
 function ChildStarDisplay({ current, total, color }: { current: number; total: number; color: string }) {
+  const starSize = total <= 5 ? "2rem" : total <= 10 ? "1.6rem" : total <= 20 ? "1.25rem" : "1rem"
+
   return (
     <div className="flex flex-col items-center gap-3 py-2">
-      <div className="relative w-20 h-20 flex items-center justify-center">
-        <span className="text-7xl leading-none select-none" aria-hidden>🤚</span>
-        <div
-          className="absolute flex flex-wrap justify-center"
-          style={{ width: "2.4rem", gap: "1px", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
-        >
-          {Array.from({ length: total }).map((_, i) => (
-            <span
-              key={i}
-              className="select-none transition-all duration-300"
-              style={{ fontSize: "0.48rem", lineHeight: 1, color: i < current ? "#1a1a1a" : "#d1d5db" }}
-            >
-              {i < current ? "★" : "☆"}
-            </span>
-          ))}
-        </div>
+      {/* Star grid */}
+      <div className="flex flex-wrap justify-center" style={{ gap: "4px", maxWidth: "14rem" }}>
+        {Array.from({ length: total }).map((_, i) => (
+          <span
+            key={i}
+            className="select-none transition-all duration-300"
+            style={{
+              fontSize: starSize,
+              lineHeight: 1,
+              color: i < current ? color : "#d1d5db",
+            }}
+          >
+            {i < current ? "★" : "☆"}
+          </span>
+        ))}
       </div>
 
       {total > 10 && (
