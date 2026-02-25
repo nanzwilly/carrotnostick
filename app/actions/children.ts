@@ -83,9 +83,16 @@ export async function getChildrenForParent() {
   })
 }
 
-export async function verifyChildPin(childId: string, pin: string) {
-  // Fetch the child first (we can't do a direct DB equality check on bcrypt hashes)
-  const child = await db.query.children.findFirst({
+const MAX_PIN_ATTEMPTS = 5
+const LOCK_DURATION_MS = 24 * 60 * 60 * 1000 // 24 hours
+
+export type VerifyPinResult =
+  | { status: "ok"; child: NonNullable<Awaited<ReturnType<typeof fetchChildWithGoals>>> }
+  | { status: "locked"; minutesLeft: number }
+  | { status: "invalid"; attemptsLeft: number }
+
+async function fetchChildWithGoals(childId: string) {
+  return db.query.children.findFirst({
     where: eq(children.id, childId),
     with: {
       goals: {
@@ -93,7 +100,6 @@ export async function verifyChildPin(childId: string, pin: string) {
         with: {
           starEvents: true,
           rewardRedemptions: true,
-          // Include pending nudges so the kid page knows which goals are already nudged
           starRequests: {
             where: (sr, { eq }) => eq(sr.status, "pending"),
           },
@@ -101,14 +107,47 @@ export async function verifyChildPin(childId: string, pin: string) {
       },
     },
   })
+}
+
+export async function verifyChildPin(childId: string, pin: string): Promise<VerifyPinResult | null> {
+  const child = await fetchChildWithGoals(childId)
   if (!child) return null
 
-  // Dual-mode: bcrypt hash for new PINs, direct compare for legacy plaintext PINs
+  // Check if account is locked
+  if (child.pinLockedUntil && child.pinLockedUntil > new Date()) {
+    const minutesLeft = Math.ceil((child.pinLockedUntil.getTime() - Date.now()) / 60_000)
+    return { status: "locked", minutesLeft }
+  }
+
+  // Verify PIN — dual-mode: bcrypt for new PINs, plaintext fallback for legacy
   const valid = isBcryptHash(child.pin)
     ? await bcrypt.compare(pin, child.pin)
     : child.pin === pin
 
-  return valid ? child : null
+  if (valid) {
+    // Reset counter on success
+    if (child.pinFailedAttempts > 0 || child.pinLockedUntil) {
+      await db.update(children)
+        .set({ pinFailedAttempts: 0, pinLockedUntil: null })
+        .where(eq(children.id, childId))
+    }
+    return { status: "ok", child }
+  }
+
+  // Wrong PIN — increment counter, lock if limit reached
+  const newAttempts = child.pinFailedAttempts + 1
+  const shouldLock = newAttempts >= MAX_PIN_ATTEMPTS
+  await db.update(children)
+    .set({
+      pinFailedAttempts: newAttempts,
+      pinLockedUntil: shouldLock ? new Date(Date.now() + LOCK_DURATION_MS) : null,
+    })
+    .where(eq(children.id, childId))
+
+  if (shouldLock) {
+    return { status: "locked", minutesLeft: 24 * 60 }
+  }
+  return { status: "invalid", attemptsLeft: MAX_PIN_ATTEMPTS - newAttempts }
 }
 
 export async function updateChildAvatar(

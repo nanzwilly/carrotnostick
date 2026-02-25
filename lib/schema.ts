@@ -73,12 +73,14 @@ export const children = pgTable("children", {
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
-  pin: text("pin").notNull(), // 4-digit PIN (plaintext for MVP family app)
+  pin: text("pin").notNull(), // bcrypt hash (6-digit PIN)
   color: text("color").notNull().default("#f97316"), // tailwind orange-500
   avatarEmoji: text("avatar_emoji").notNull().default("🌟"), // animal base (legacy fallback)
   avatarHat: text("avatar_hat"),          // optional hat accessory (legacy fallback)
   avatarGlasses: text("avatar_glasses"),  // optional glasses accessory (legacy fallback)
   avatarConfig: jsonb("avatar_config").$type<BigHeadConfig>(), // BigHead config (takes precedence)
+  pinFailedAttempts: integer("pin_failed_attempts").notNull().default(0),
+  pinLockedUntil: timestamp("pin_locked_until"),    // null = not locked
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

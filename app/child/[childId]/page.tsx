@@ -108,24 +108,45 @@ export default function ChildPage() {
     setLoading(true)
     setError("")
     const result = await verifyChildPin(childId, pin)
-    if (result) {
-      const c = result as ChildWithGoals
-      const alreadyNudged = new Set(
-        c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
-      )
-      setNudgedGoals(alreadyNudged)
-      setEditConfig(c.avatarConfig ?? DEFAULT_BIGHEAD_CONFIG)
-      setChild(c)
-      try {
-        localStorage.setItem(
-          `cns_child_${childId}`,
-          JSON.stringify({ expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 })
-        )
-      } catch {}
-    } else {
-      setError("Wrong PIN. Try again!")
-      setPin("")
+    if (!result) {
+      setError("Something went wrong. Try again!")
+      setLoading(false)
+      return
     }
+    if (result.status === "locked") {
+      const hours = Math.floor(result.minutesLeft / 60)
+      const mins = result.minutesLeft % 60
+      const timeStr = hours > 0 ? `${hours}h ${mins}m` : `${mins} minutes`
+      setError(`Too many wrong PINs 🔒 Try again in ${timeStr}.`)
+      setPin("")
+      setLoading(false)
+      return
+    }
+    if (result.status === "invalid") {
+      const left = result.attemptsLeft
+      setError(
+        left === 1
+          ? "Wrong PIN — 1 try left before lockout! ⚠️"
+          : `Wrong PIN. ${left} tries left.`
+      )
+      setPin("")
+      setLoading(false)
+      return
+    }
+    // status === "ok"
+    const c = result.child as ChildWithGoals
+    const alreadyNudged = new Set(
+      c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
+    )
+    setNudgedGoals(alreadyNudged)
+    setEditConfig(c.avatarConfig ?? DEFAULT_BIGHEAD_CONFIG)
+    setChild(c)
+    try {
+      localStorage.setItem(
+        `cns_child_${childId}`,
+        JSON.stringify({ expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 })
+      )
+    } catch {}
     setLoading(false)
   }
 
