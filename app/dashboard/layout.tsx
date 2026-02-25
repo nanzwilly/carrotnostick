@@ -3,6 +3,8 @@ import { redirect } from "next/navigation"
 import Link from "next/link"
 import ProfileDropdown from "@/components/ProfileDropdown"
 import LogoText from "@/components/Logo"
+import TrialBanner from "@/components/TrialBanner"
+import type { SubStatus } from "@/lib/subscription"
 
 export default async function DashboardLayout({
   children,
@@ -19,6 +21,12 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen">
+      {/* Trial / subscription banner */}
+      <TrialBanner
+        status={(session.user.subStatus ?? "trialing") as SubStatus}
+        daysLeft={session.user.subDaysLeft}
+      />
+
       {/* Header */}
       <header className="bg-white border-b border-amber-100 px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center justify-between">

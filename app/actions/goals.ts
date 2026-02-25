@@ -2,10 +2,11 @@
 
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { goals, children } from "@/lib/schema"
+import { goals, children, users } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { canAccessFamily, getOwnerIdForUser } from "@/lib/family"
+import { getSubStatus } from "@/lib/subscription"
 
 // ── Helper: verify goal belongs to the calling parent (or co-parent) ─────────
 async function verifyGoalOwnership(goalId: string, userId: string) {
@@ -81,6 +82,16 @@ export async function unarchiveGoal(goalId: string) {
 export async function createGoal(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")
+
+  // Check subscription status
+  const dbUser = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id),
+    columns: { email: true, isPremium: true, trialStartedAt: true },
+  })
+  if (dbUser) {
+    const sub = getSubStatus(dbUser)
+    if (sub.status === "expired") throw new Error("SUBSCRIPTION_REQUIRED")
+  }
 
   const childId = formData.get("childId") as string
   const name = formData.get("name") as string

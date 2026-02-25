@@ -6,6 +6,7 @@ import { db } from "@/lib/db"
 import { users, accounts, sessions, verificationTokens } from "@/lib/schema"
 import { eq } from "drizzle-orm"
 import bcrypt from "bcryptjs"
+import { getSubStatus } from "@/lib/subscription"
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
@@ -54,14 +55,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
   },
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       // Persist the user ID into the token on first sign-in
       if (user) token.id = user.id
+
+      // Always refresh subscription status from DB on sign-in (and periodically via token refresh)
+      if (token.id) {
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, token.id as string),
+          columns: { email: true, isPremium: true, trialStartedAt: true },
+        })
+        if (dbUser) {
+          // Backfill trialStartedAt for existing users who signed up before this feature
+          if (!dbUser.trialStartedAt) {
+            await db.update(users)
+              .set({ trialStartedAt: new Date() })
+              .where(eq(users.id, token.id as string))
+            dbUser.trialStartedAt = new Date()
+          }
+          token.email = dbUser.email
+          token.isPremium = dbUser.isPremium
+          token.trialStartedAt = dbUser.trialStartedAt?.toISOString() ?? null
+          const sub = getSubStatus({ email: dbUser.email, isPremium: dbUser.isPremium, trialStartedAt: dbUser.trialStartedAt })
+          token.subStatus = sub.status
+          token.subDaysLeft = sub.daysLeft ?? null
+        }
+      }
+
       return token
     },
     session({ session, token }) {
-      // Expose user ID from the token to the session
+      // Expose user ID and subscription info from the token to the session
       session.user.id = token.id as string
+      session.user.isPremium = token.isPremium as boolean
+      session.user.trialStartedAt = token.trialStartedAt as string | null
+      session.user.subStatus = token.subStatus as string
+      session.user.subDaysLeft = token.subDaysLeft as number | null
       return session
     },
   },

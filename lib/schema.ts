@@ -23,6 +23,9 @@ export const users = pgTable("user", {
   emailVerified: timestamp("emailVerified", { mode: "date" }),
   image: text("image"),
   password: text("password"), // null for OAuth-only users
+  trialStartedAt: timestamp("trial_started_at").defaultNow(),
+  isPremium: boolean("is_premium").notNull().default(false),
+  razorpaySubscriptionId: text("razorpay_subscription_id"),
 })
 
 export const accounts = pgTable(
