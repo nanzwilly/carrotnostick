@@ -5,8 +5,8 @@
  */
 export default function LogoText() {
   return (
-    <span className="inline-flex items-center gap-1.5 font-bold tracking-tight">
-      <span className="text-[1.2em]">🥕</span>
+    <span className="inline-flex items-baseline gap-1.5 font-bold tracking-tight">
+      <span className="text-[1.5em] leading-none">🥕</span>
       <span className="text-gray-900">
         Carrot<span className="text-orange-400">·</span>NoStick
       </span>
