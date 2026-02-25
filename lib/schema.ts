@@ -6,7 +6,9 @@ import {
   integer,
   boolean,
   primaryKey,
+  jsonb,
 } from "drizzle-orm/pg-core"
+import type { BigHeadConfig } from "@/components/BigHeadAvatar"
 import { relations } from "drizzle-orm"
 import type { AdapterAccountType } from "next-auth/adapters"
 
@@ -73,9 +75,10 @@ export const children = pgTable("children", {
   name: text("name").notNull(),
   pin: text("pin").notNull(), // 4-digit PIN (plaintext for MVP family app)
   color: text("color").notNull().default("#f97316"), // tailwind orange-500
-  avatarEmoji: text("avatar_emoji").notNull().default("🌟"), // animal base
-  avatarHat: text("avatar_hat"),          // optional hat accessory
-  avatarGlasses: text("avatar_glasses"),  // optional glasses accessory
+  avatarEmoji: text("avatar_emoji").notNull().default("🌟"), // animal base (legacy fallback)
+  avatarHat: text("avatar_hat"),          // optional hat accessory (legacy fallback)
+  avatarGlasses: text("avatar_glasses"),  // optional glasses accessory (legacy fallback)
+  avatarConfig: jsonb("avatar_config").$type<BigHeadConfig>(), // BigHead config (takes precedence)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 })
 

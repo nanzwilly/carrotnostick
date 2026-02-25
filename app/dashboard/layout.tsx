@@ -2,6 +2,7 @@ import { auth, signOut } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import ProfileDropdown from "@/components/ProfileDropdown"
+import LogoText from "@/components/Logo"
 
 export default async function DashboardLayout({
   children,
@@ -27,7 +28,7 @@ export default async function DashboardLayout({
           >
             <span className="text-2xl">🥕</span>
             <span className="font-bold text-gray-900 text-lg tracking-tight">
-              carrotnostick
+              <LogoText />
             </span>
           </Link>
 

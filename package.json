@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.1",
+    "@bigheads/core": "^0.3.3",
     "@neondatabase/serverless": "^1.0.2",
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.3.1",

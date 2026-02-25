@@ -86,11 +86,11 @@ export default async function DashboardPage({
           <div key={child.id} className="bg-white rounded-3xl shadow-sm overflow-hidden">
             {/* Child header */}
             <div
-              className="px-6 py-4 flex items-center justify-between"
+              className="px-6 pt-7 pb-4 flex items-center justify-between"
               style={{ backgroundColor: child.color + "20" }} // 12% opacity tint
             >
               <div className="flex items-center gap-3">
-                <AvatarDisplay animal={child.avatarEmoji} hat={child.avatarHat} glasses={child.avatarGlasses} size="lg" />
+                <AvatarDisplay animal={child.avatarEmoji} hat={child.avatarHat} glasses={child.avatarGlasses} avatarConfig={child.avatarConfig} size="xl" />
                 <div>
                   <h2 className="text-lg font-bold text-gray-900">{child.name}</h2>
                   <p className="text-xs text-gray-500">PIN: {child.pin}</p>
@@ -109,7 +109,7 @@ export default async function DashboardPage({
             </div>
 
             {/* Goals */}
-            <div className="divide-y divide-gray-50">
+            <div className="divide-y-2 divide-gray-100">
               {child.goals.length === 0 && (
                 <div className="px-6 py-8 text-center text-gray-400 text-sm">
                   No goals yet.{" "}
@@ -127,7 +127,7 @@ export default async function DashboardPage({
             </div>
 
             {/* Archived goals link */}
-            <div className="px-6 py-3 border-t border-gray-50">
+            <div className="px-6 py-3 border-t-2 border-gray-100">
               <Link
                 href={`/dashboard/child/${child.id}/archived`}
                 className="text-xs text-gray-400 hover:text-gray-600 transition-colors"

@@ -1,16 +1,18 @@
 "use client"
 
-import { useState } from "react"
-import { verifyChildPin, updateChildAvatar, getSiblings } from "@/app/actions/children"
+import { useState, useEffect } from "react"
+import { verifyChildPin, getSiblings, getChildByIdNoPin, saveBigHeadConfig } from "@/app/actions/children"
 import { createStarRequest } from "@/app/actions/stars"
 import type { Child, Goal, StarEvent, RewardRedemption, StarRequest } from "@/lib/schema"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import AvatarDisplay from "@/components/AvatarDisplay"
-
-const ANIMALS = ["🐱","🐶","🐭","🐹","🐰","🦊","🐻","🐼","🐨","🐯","🦁","🐮","🐷","🐸","🐵","🦄","🐔","🐧","🦋","🐙","🦖","🐲"]
-const HATS    = ["🎩","👒","🎓","🪖","👑","🧢","🎅"]
-const GLASSES = ["🕶️","👓"]
+import LogoText from "@/components/Logo"
+import BigHeadAvatar, {
+  type BigHeadConfig,
+  DEFAULT_BIGHEAD_CONFIG,
+  EDITOR_CATEGORIES,
+} from "@/components/BigHeadAvatar"
 
 type GoalWithEvents = Goal & {
   starEvents: StarEvent[]
@@ -38,15 +40,52 @@ export default function ChildPage() {
   const [child, setChild] = useState<ChildWithGoals | null>(null)
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
+  // True while we check localStorage on first render (prevents PIN screen flash)
+  const [sessionLoading, setSessionLoading] = useState(true)
+
+  // ── Restore 30-day session from localStorage ────────────────────────────────
+  useEffect(() => {
+    const SESSION_KEY = `cns_child_${childId}`
+    let cancelled = false
+
+    const restore = async () => {
+      try {
+        const raw = localStorage.getItem(SESSION_KEY)
+        if (raw) {
+          const { expiry } = JSON.parse(raw) as { expiry: number }
+          if (expiry > Date.now()) {
+            const result = await getChildByIdNoPin(childId)
+            if (!cancelled && result) {
+              const c = result as ChildWithGoals
+              const alreadyNudged = new Set(
+                c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
+              )
+              setNudgedGoals(alreadyNudged)
+              setEditConfig(c.avatarConfig ?? DEFAULT_BIGHEAD_CONFIG)
+              setChild(c)
+              localStorage.setItem(SESSION_KEY, JSON.stringify({ expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 }))
+            }
+          }
+        }
+      } catch {
+        // localStorage unavailable or corrupted — just show the PIN screen
+      } finally {
+        if (!cancelled) setSessionLoading(false)
+      }
+    }
+
+    restore()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Track which goals this kid has already nudged this session
   const [nudgedGoals, setNudgedGoals] = useState<Set<string>>(new Set())
 
-  // Avatar editor
+  // BigHead avatar editor
   const [showAvatarEditor, setShowAvatarEditor] = useState(false)
-  const [editAnimal, setEditAnimal] = useState("")
-  const [editHat, setEditHat] = useState<string | null>(null)
-  const [editGlasses, setEditGlasses] = useState<string | null>(null)
+  const [activeCategory, setActiveCategory] = useState(EDITOR_CATEGORIES[0].key)
+  const [editConfig, setEditConfig] = useState<BigHeadConfig>(DEFAULT_BIGHEAD_CONFIG)
   const [avatarSaving, setAvatarSaving] = useState(false)
 
   // Leaderboard
@@ -71,17 +110,18 @@ export default function ChildPage() {
     const result = await verifyChildPin(childId, pin)
     if (result) {
       const c = result as ChildWithGoals
-      // Pre-populate nudged set from any already-pending requests
       const alreadyNudged = new Set(
-        c.goals
-          .filter((g) => g.starRequests.length > 0)
-          .map((g) => g.id)
+        c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
       )
       setNudgedGoals(alreadyNudged)
-      setEditAnimal(c.avatarEmoji)
-      setEditHat(c.avatarHat ?? null)
-      setEditGlasses(c.avatarGlasses ?? null)
+      setEditConfig(c.avatarConfig ?? DEFAULT_BIGHEAD_CONFIG)
       setChild(c)
+      try {
+        localStorage.setItem(
+          `cns_child_${childId}`,
+          JSON.stringify({ expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 })
+        )
+      } catch {}
     } else {
       setError("Wrong PIN. Try again!")
       setPin("")
@@ -89,14 +129,30 @@ export default function ChildPage() {
     setLoading(false)
   }
 
-  // ── PIN entry screen ────────────────────────────────────────────────────────
+  // ── Sign out ─────────────────────────────────────────────────────────────────
+  const handleSignOut = () => {
+    try { localStorage.removeItem(`cns_child_${childId}`) } catch {}
+    setChild(null)
+    setPin("")
+  }
+
+  // ── Session restore loading splash ───────────────────────────────────────────
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-4xl animate-pulse">🥕</div>
+      </div>
+    )
+  }
+
+  // ── PIN entry screen ──────────────────────────────────────────────────────────
   if (!child) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-xs text-center space-y-6">
           <div className="space-y-1">
             <div className="text-5xl">🥕</div>
-            <h1 className="text-xl font-bold text-gray-900">carrotnostick</h1>
+            <h1 className="text-xl font-bold text-gray-900"><LogoText /></h1>
           </div>
           <p className="text-gray-500 text-sm">Enter your PIN to see your stars</p>
 
@@ -113,11 +169,7 @@ export default function ChildPage() {
               autoFocus
               className="w-full border-2 border-gray-200 focus:border-orange-400 rounded-2xl px-4 py-4 text-center text-3xl tracking-widest font-mono text-gray-900 focus:outline-none transition-colors"
             />
-
-            {error && (
-              <p className="text-sm text-red-500 animate-bounce">{error}</p>
-            )}
-
+            {error && <p className="text-sm text-red-500 animate-bounce">{error}</p>}
             <button
               type="submit"
               disabled={loading || pin.length !== 4}
@@ -131,119 +183,123 @@ export default function ChildPage() {
     )
   }
 
-  // ── Star view ───────────────────────────────────────────────────────────────
+  // The config to show in the header (live-updates as the editor changes)
+  const displayConfig = child.avatarConfig ?? editConfig
+
+  // ── Star view ─────────────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-screen px-4 py-8"
-      style={{ backgroundColor: child.color + "15" }}
-    >
-      <div className="max-w-sm mx-auto space-y-6">
+    <div className="min-h-screen" style={{ backgroundColor: child.color + "15" }}>
+      {/* Top logo bar */}
+      <div className="bg-white/70 backdrop-blur-sm border-b border-white/60 px-4 py-3 text-center">
+        <span className="font-bold text-gray-800 text-base tracking-tight">
+          <LogoText />
+        </span>
+      </div>
+
+      <div className="max-w-sm mx-auto px-4 py-8 space-y-6">
+
         {/* Header */}
         <div className="text-center space-y-1">
           <button
-            onClick={() => setShowAvatarEditor(true)}
+            onClick={() => { setActiveCategory(EDITOR_CATEGORIES[0].key); setShowAvatarEditor(true) }}
             className="relative inline-block focus:outline-none group"
             title="Tap to change your look!"
           >
-            <AvatarDisplay animal={editAnimal || child.avatarEmoji} hat={editHat} glasses={editGlasses} size="xl" />
+            <BigHeadAvatar config={editConfig} size={112} />
             <span className="absolute -bottom-1 -right-1 bg-white border border-gray-200 rounded-full text-sm px-1.5 py-0.5 shadow-sm opacity-80 group-hover:opacity-100 transition-opacity">✏️</span>
           </button>
           <h1 className="text-3xl font-black text-gray-900">{child.name}</h1>
           <p className="text-gray-500 text-sm">Your stars ⭐</p>
+          <button
+            onClick={handleSignOut}
+            className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+          >
+            Sign out
+          </button>
         </div>
 
-        {/* Avatar editor modal */}
+        {/* ── BigHead avatar editor modal ─────────────────────────────────────── */}
         {showAvatarEditor && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-2 pb-0">
-            <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 space-y-5 max-h-[85vh] overflow-y-auto">
-              <div className="flex items-center justify-between">
+            <div className="bg-white rounded-t-3xl w-full max-w-sm flex flex-col max-h-[90vh]">
+
+              {/* Top bar */}
+              <div className="flex items-center justify-between px-6 pt-5 pb-3 shrink-0">
                 <h2 className="text-lg font-bold text-gray-900">Your look 🎨</h2>
-                <button onClick={() => setShowAvatarEditor(false)} className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100">✕</button>
+                <button
+                  onClick={() => setShowAvatarEditor(false)}
+                  className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+                >
+                  ✕
+                </button>
               </div>
 
-              {/* Preview */}
-              <div className="flex justify-center py-2">
-                <AvatarDisplay animal={editAnimal || child.avatarEmoji} hat={editHat} glasses={editGlasses} size="xl" />
+              {/* Live preview */}
+              <div className="flex justify-center pb-2 shrink-0">
+                <BigHeadAvatar config={editConfig} size={160} />
               </div>
 
-              {/* Animal picker */}
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-700">🐾 Pick your animal</p>
-                <div className="flex flex-wrap gap-2">
-                  {ANIMALS.map((a) => (
-                    <button
-                      key={a}
-                      onClick={() => setEditAnimal(a)}
-                      className={`text-2xl p-2 rounded-xl transition-all ${editAnimal === a ? "bg-orange-100 ring-2 ring-orange-400 scale-110" : "hover:bg-gray-100"}`}
-                    >
-                      {a}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Hat picker */}
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-700">🎩 Hat</p>
-                <div className="flex flex-wrap gap-2">
+              {/* Category tab bar */}
+              <div className="flex gap-2 px-4 pb-2 overflow-x-auto shrink-0 scrollbar-hide">
+                {EDITOR_CATEGORIES.map((cat) => (
                   <button
-                    onClick={() => setEditHat(null)}
-                    className={`text-sm px-3 py-1.5 rounded-xl border transition-all ${editHat === null ? "bg-orange-100 border-orange-400 text-orange-700 font-bold" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+                    key={cat.key}
+                    onClick={() => setActiveCategory(cat.key)}
+                    className={`shrink-0 flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                      activeCategory === cat.key
+                        ? "bg-orange-500 text-white"
+                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                    }`}
                   >
-                    None
+                    <span>{cat.emoji}</span>
+                    <span>{cat.label}</span>
                   </button>
-                  {HATS.map((h) => (
-                    <button
-                      key={h}
-                      onClick={() => setEditHat(h)}
-                      className={`text-2xl p-2 rounded-xl transition-all ${editHat === h ? "bg-orange-100 ring-2 ring-orange-400 scale-110" : "hover:bg-gray-100"}`}
-                    >
-                      {h}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
 
-              {/* Glasses picker */}
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-700">🕶️ Glasses</p>
+              {/* Options for selected category */}
+              <div className="overflow-y-auto px-4 pb-4 pt-1 flex-1">
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={() => setEditGlasses(null)}
-                    className={`text-sm px-3 py-1.5 rounded-xl border transition-all ${editGlasses === null ? "bg-orange-100 border-orange-400 text-orange-700 font-bold" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
-                  >
-                    None
-                  </button>
-                  {GLASSES.map((g) => (
-                    <button
-                      key={g}
-                      onClick={() => setEditGlasses(g)}
-                      className={`text-2xl p-2 rounded-xl transition-all ${editGlasses === g ? "bg-orange-100 ring-2 ring-orange-400 scale-110" : "hover:bg-gray-100"}`}
-                    >
-                      {g}
-                    </button>
-                  ))}
+                  {EDITOR_CATEGORIES.find((c) => c.key === activeCategory)?.options.map((opt) => {
+                    const isSelected = editConfig[activeCategory as keyof BigHeadConfig] === opt.value
+                    return (
+                      <button
+                        key={opt.value}
+                        onClick={() => setEditConfig((prev) => ({ ...prev, [activeCategory]: opt.value }))}
+                        className={`px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
+                          isSelected
+                            ? "bg-orange-500 text-white scale-105 shadow-sm"
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
-              <button
-                disabled={avatarSaving}
-                onClick={async () => {
-                  setAvatarSaving(true)
-                  await updateChildAvatar(child.id, editAnimal || child.avatarEmoji, editHat, editGlasses)
-                  setChild((prev) => prev ? { ...prev, avatarEmoji: editAnimal || prev.avatarEmoji, avatarHat: editHat, avatarGlasses: editGlasses } : prev)
-                  setAvatarSaving(false)
-                  setShowAvatarEditor(false)
-                }}
-                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-2xl py-3 transition-colors"
-              >
-                {avatarSaving ? "Saving…" : "Save my look! 🎉"}
-              </button>
+              {/* Save button */}
+              <div className="px-4 pb-5 pt-2 shrink-0">
+                <button
+                  disabled={avatarSaving}
+                  onClick={async () => {
+                    setAvatarSaving(true)
+                    await saveBigHeadConfig(child.id, editConfig)
+                    setChild((prev) => prev ? { ...prev, avatarConfig: editConfig } : prev)
+                    setAvatarSaving(false)
+                    setShowAvatarEditor(false)
+                  }}
+                  className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-2xl py-3 transition-colors text-base"
+                >
+                  {avatarSaving ? "Saving…" : "Save my look! 🎉"}
+                </button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Leaderboard modal */}
+        {/* ── Leaderboard modal ──────────────────────────────────────────────── */}
         {showLeaderboard && (
           <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-2 pb-0">
             <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 space-y-5 max-h-[80vh] overflow-y-auto">
@@ -271,9 +327,10 @@ export default function ChildPage() {
                     {
                       id: child.id,
                       name: child.name,
-                      avatarEmoji: editAnimal || child.avatarEmoji,
-                      avatarHat: editHat,
-                      avatarGlasses: editGlasses,
+                      avatarEmoji: child.avatarEmoji,
+                      avatarHat: child.avatarHat,
+                      avatarGlasses: null,
+                      avatarConfig: editConfig,
                       color: child.color,
                       totalStars: computeTotalStars(child.goals),
                       isMe: true,
@@ -284,6 +341,7 @@ export default function ChildPage() {
                       avatarEmoji: s.avatarEmoji,
                       avatarHat: s.avatarHat,
                       avatarGlasses: s.avatarGlasses,
+                      avatarConfig: s.avatarConfig ?? null,
                       color: s.color,
                       totalStars: computeTotalStars(s.goals),
                       isMe: false,
@@ -296,9 +354,7 @@ export default function ChildPage() {
                         <div
                           key={entry.id}
                           className={`flex items-center gap-3 p-3 rounded-2xl transition-all ${
-                            entry.isMe
-                              ? "ring-2 ring-orange-400 bg-orange-50"
-                              : "bg-gray-50"
+                            entry.isMe ? "ring-2 ring-orange-400 bg-orange-50" : "bg-gray-50"
                           }`}
                         >
                           <span className="text-2xl w-8 text-center shrink-0">{medal}</span>
@@ -306,6 +362,7 @@ export default function ChildPage() {
                             animal={entry.avatarEmoji}
                             hat={entry.avatarHat}
                             glasses={entry.avatarGlasses}
+                            avatarConfig={entry.avatarConfig}
                             size="sm"
                           />
                           <div className="flex-1 min-w-0">
@@ -319,10 +376,7 @@ export default function ChildPage() {
                               {entry.totalStars} star{entry.totalStars !== 1 ? "s" : ""} collected
                             </p>
                           </div>
-                          <span
-                            className="text-xl font-black shrink-0"
-                            style={{ color: entry.color }}
-                          >
+                          <span className="text-xl font-black shrink-0" style={{ color: entry.color }}>
                             {entry.totalStars}⭐
                           </span>
                         </div>
@@ -375,13 +429,13 @@ export default function ChildPage() {
           🏆 See how the competition is doing
         </button>
 
-        <p className="text-center text-xs text-gray-400 pb-4">carrotnostick 🥕</p>
+        <p className="text-center text-xs text-gray-400 pb-4"><LogoText /> 🥕</p>
       </div>
     </div>
   )
 }
 
-// ── Goal card with nudge button ───────────────────────────────────────────────
+// ── Goal card ─────────────────────────────────────────────────────────────────
 
 function GoalCard({
   goal,
@@ -413,20 +467,13 @@ function GoalCard({
 
   return (
     <div className="bg-white rounded-3xl shadow-sm p-6 space-y-4">
-      {/* Goal name */}
       <div className="flex items-center gap-2">
         <span className="text-2xl">{goal.emoji}</span>
         <p className="font-bold text-gray-800 text-lg">{goal.name}</p>
       </div>
 
-      {/* Stars on hand */}
-      <ChildStarDisplay
-        current={starsInCycle}
-        total={goal.starThreshold}
-        color={child.color}
-      />
+      <ChildStarDisplay current={starsInCycle} total={goal.starThreshold} color={child.color} />
 
-      {/* Status / actions */}
       <div className="space-y-3">
         {rewardReached ? (
           <div className="bg-green-50 rounded-2xl px-4 py-3 text-center">
@@ -440,13 +487,11 @@ function GoalCard({
             </Link>
           </div>
         ) : sent ? (
-          /* Already nudged */
           <div className="bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3 text-center">
             <p className="text-amber-700 font-semibold text-sm">📨 Parent notified!</p>
             <p className="text-amber-500 text-xs mt-0.5">Waiting for them to give you a star…</p>
           </div>
         ) : (
-          /* Nudge form */
           <div className="space-y-2">
             <p className="text-center text-gray-500 text-sm">
               {remaining === 1
@@ -473,7 +518,6 @@ function GoalCard({
         )}
       </div>
 
-      {/* Redeemed count */}
       {goal.rewardRedemptions.length > 0 && (
         <p className="text-xs text-center text-gray-400">
           🏆 You&apos;ve earned this reward {goal.rewardRedemptions.length}× already!
@@ -485,42 +529,20 @@ function GoalCard({
 
 // ── Star hand display ─────────────────────────────────────────────────────────
 
-function ChildStarDisplay({
-  current,
-  total,
-  color,
-}: {
-  current: number
-  total: number
-  color: string
-}) {
+function ChildStarDisplay({ current, total, color }: { current: number; total: number; color: string }) {
   return (
     <div className="flex flex-col items-center gap-3 py-2">
-      {/* 🤚 Back-of-hand — same size for every goal */}
       <div className="relative w-20 h-20 flex items-center justify-center">
-        {/* Hand */}
         <span className="text-7xl leading-none select-none" aria-hidden>🤚</span>
-
-        {/* Tiny black stars — absolutely centred on the palm */}
         <div
           className="absolute flex flex-wrap justify-center"
-          style={{
-            width: "2.4rem",
-            gap: "1px",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-          }}
+          style={{ width: "2.4rem", gap: "1px", top: "50%", left: "50%", transform: "translate(-50%, -50%)" }}
         >
           {Array.from({ length: total }).map((_, i) => (
             <span
               key={i}
               className="select-none transition-all duration-300"
-              style={{
-                fontSize: "0.48rem",
-                lineHeight: 1,
-                color: i < current ? "#1a1a1a" : "#d1d5db",
-              }}
+              style={{ fontSize: "0.48rem", lineHeight: 1, color: i < current ? "#1a1a1a" : "#d1d5db" }}
             >
               {i < current ? "★" : "☆"}
             </span>
@@ -528,16 +550,12 @@ function ChildStarDisplay({
         </div>
       </div>
 
-      {/* Progress bar for goals with many stars (>10) */}
       {total > 10 && (
         <div className="w-full px-4">
           <div className="bg-gray-100 rounded-full h-3 overflow-hidden">
             <div
               className="h-full rounded-full transition-all duration-500"
-              style={{
-                width: `${Math.min((current / total) * 100, 100)}%`,
-                backgroundColor: color,
-              }}
+              style={{ width: `${Math.min((current / total) * 100, 100)}%`, backgroundColor: color }}
             />
           </div>
         </div>

@@ -6,6 +6,7 @@ import { children } from "@/lib/schema"
 import { eq, and, ne } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getOwnerIdForUser } from "@/lib/family"
+import type { BigHeadConfig } from "@/components/BigHeadAvatar"
 
 export async function createChild(formData: FormData) {
   const session = await auth()
@@ -87,6 +88,15 @@ export async function updateChildAvatar(
     .where(eq(children.id, childId))
 }
 
+export async function saveBigHeadConfig(childId: string, config: BigHeadConfig) {
+  // No parent auth — child saves their BigHead avatar from the kid page.
+  // childId is a UUID (not guessable), safe for a family app.
+  await db
+    .update(children)
+    .set({ avatarConfig: config })
+    .where(eq(children.id, childId))
+}
+
 export async function getPendingRequests() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")
@@ -118,6 +128,27 @@ export async function getPendingRequests() {
       }))
     )
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+}
+
+export async function getChildByIdNoPin(childId: string) {
+  // No auth, no PIN — childId is a UUID (not guessable), safe for a family app.
+  // Used to restore a 30-day localStorage session without re-entering the PIN.
+  const child = await db.query.children.findFirst({
+    where: eq(children.id, childId),
+    with: {
+      goals: {
+        where: (goals, { eq }) => eq(goals.isActive, true),
+        with: {
+          starEvents: true,
+          rewardRedemptions: true,
+          starRequests: {
+            where: (sr, { eq }) => eq(sr.status, "pending"),
+          },
+        },
+      },
+    },
+  })
+  return child ?? null
 }
 
 export async function getSiblings(childId: string) {

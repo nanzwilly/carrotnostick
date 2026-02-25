@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { giveStar, redeemReward } from "@/app/actions/stars"
 import { archiveGoal, deleteGoal, updateGoal } from "@/app/actions/goals"
 import StarDisplay from "./StarDisplay"
@@ -40,13 +40,21 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
   const buttonRef = useRef<HTMLButtonElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // Calculate unredeemed stars
+  // Calculate unredeemed stars (server-side values)
   const totalStars = goal.starEvents.length
   const redeemedCycles = goal.rewardRedemptions.length
   const redeemedStars = redeemedCycles * goal.starThreshold
   const currentStars = totalStars - redeemedStars
   const starsInCycle = currentStars % goal.starThreshold || (currentStars > 0 && currentStars >= goal.starThreshold ? goal.starThreshold : currentStars)
   const rewardReached = currentStars >= goal.starThreshold
+
+  // Optimistic extra stars — incremented immediately on click, reset when server data arrives
+  const [optimisticExtra, setOptimisticExtra] = useState(0)
+  useEffect(() => { setOptimisticExtra(0) }, [totalStars])
+
+  const optCurrentStars = currentStars + optimisticExtra
+  const optStarsInCycle = optCurrentStars % goal.starThreshold || (optCurrentStars > 0 && optCurrentStars >= goal.starThreshold ? goal.starThreshold : optCurrentStars)
+  const optRewardReached = optCurrentStars >= goal.starThreshold
 
   // ── Fly star from button to its slot ──────────────────────────────────────
   const flyStarToSlot = (targetSlotIndex: number) => {
@@ -110,15 +118,16 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
   const handleGiveStar = async () => {
     setLoading(true)
 
-    // Fire the animation immediately — before waiting for the server
+    // Fire animation + optimistic counter update immediately — no waiting for the server
     flyStarToSlot(starsInCycle)
+    setOptimisticExtra((n) => n + 1)
 
     try {
       const result = await giveStar(goal.id)
       if (result.rewardReached) {
         setTimeout(() => setShowCelebration(true), 400)
       }
-      router.refresh()
+      router.refresh() // when this resolves, useEffect resets optimisticExtra to 0
     } finally {
       setLoading(false)
     }
@@ -382,7 +391,7 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
           <p className="text-xs text-gray-400 flex-1 min-w-0 truncate">
             Reward: {goal.rewardDescription} · every {goal.starThreshold} ⭐
           </p>
-          {!rewardReached && (
+          {!optRewardReached && (
             <button
               ref={buttonRef}
               onClick={handleGiveStar}
@@ -396,13 +405,13 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
 
         {/* Star display */}
         <StarDisplay
-          current={starsInCycle}
+          current={optStarsInCycle}
           total={goal.starThreshold}
           rewardDescription={goal.rewardDescription}
         />
 
         {/* Reward reached banner */}
-        {rewardReached && !showCelebration && (
+        {optRewardReached && !showCelebration && (
           <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 flex items-center justify-between">
             <div>
               <p className="font-bold text-green-800 text-sm">🎉 Reward earned!</p>

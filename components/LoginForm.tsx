@@ -4,6 +4,7 @@ import { useState } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import LogoText from "@/components/Logo"
 
 export default function LoginForm({
   googleSignIn,
@@ -41,7 +42,7 @@ export default function LoginForm({
         <div className="text-center space-y-1">
           <div className="text-6xl">🥕</div>
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-            carrotnostick
+            <LogoText />
           </h1>
           <p className="text-gray-500 text-sm">
             A star reward system for your family
