@@ -100,7 +100,7 @@ export default async function DashboardPage({
                 <CopyLinkButton url={childUrl} />
                 <Link
                   href={`/dashboard/child/${child.id}/new-goal`}
-                  className="text-sm bg-white border border-gray-200 rounded-full px-3 py-1.5 font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+                  className="text-sm bg-white border border-gray-200 rounded-full px-3 py-1.5 font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
                 >
                   + Goal
                 </Link>
