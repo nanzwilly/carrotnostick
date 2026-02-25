@@ -17,6 +17,7 @@ export default function ProfileDropdown({
   signOut: () => Promise<void>
 }) {
   const [open, setOpen] = useState(false)
+  const [imgError, setImgError] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   // Close on click outside
@@ -41,11 +42,13 @@ export default function ProfileDropdown({
         aria-expanded={open}
         aria-haspopup="true"
       >
-        {user.image ? (
+        {user.image && !imgError ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={user.image}
             alt={user.name ?? ""}
+            referrerPolicy="no-referrer"
+            onError={() => setImgError(true)}
             className="w-8 h-8 rounded-full"
           />
         ) : (

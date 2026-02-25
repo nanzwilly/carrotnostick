@@ -6,16 +6,9 @@
 export default function LogoText() {
   return (
     <span className="inline-flex items-center gap-1.5 font-bold tracking-tight">
-      <span>🥕</span>
+      <span className="text-[1.2em]">🥕</span>
       <span className="text-gray-900">
-        Carrot
-        <span
-          className="text-orange-400 inline-block relative"
-          style={{ top: "0.15em" }}
-        >
-          ·
-        </span>
-        NoStick
+        Carrot<span className="text-orange-400">·</span>NoStick
       </span>
     </span>
   )
