@@ -3,8 +3,27 @@
 import { useState } from "react"
 import { updateChildPin } from "@/app/actions/children"
 
-export default function ChangeChildPinButton({ childId, childName }: { childId: string; childName: string }) {
-  const [open, setOpen] = useState(false)
+interface ChangeChildPinButtonProps {
+  childId: string
+  childName: string
+  /** When set, modal open state is controlled by parent (e.g. opened from three-dot menu). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** When true, do not render the "Change PIN" trigger link (use with controlled open). */
+  hideTrigger?: boolean
+}
+
+export default function ChangeChildPinButton({
+  childId,
+  childName,
+  open: controlledOpen,
+  onOpenChange,
+  hideTrigger = false,
+}: ChangeChildPinButtonProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled ? (onOpenChange ?? (() => {})) : setInternalOpen
   const [pin, setPin] = useState("")
   const [confirm, setConfirm] = useState("")
   const [loading, setLoading] = useState(false)
@@ -43,13 +62,15 @@ export default function ChangeChildPinButton({ childId, childName }: { childId: 
 
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="text-xs text-gray-400 hover:text-orange-500 transition-colors font-medium"
-        title={`Change ${childName}'s PIN`}
-      >
-        🔑 Change PIN
-      </button>
+      {!hideTrigger && (
+        <button
+          onClick={() => setOpen(true)}
+          className="text-xs text-gray-400 hover:text-orange-500 transition-colors font-medium"
+          title={`Change ${childName}'s PIN`}
+        >
+          🔑 Change PIN
+        </button>
+      )}
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

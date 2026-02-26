@@ -73,6 +73,21 @@ export async function updateChildPin(childId: string, pin: string) {
   revalidatePath("/dashboard")
 }
 
+export async function deleteChild(childId: string) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorised")
+
+  const ownerId = await getOwnerIdForUser(session.user.id)
+  const child = await db.query.children.findFirst({
+    where: and(eq(children.id, childId), eq(children.parentId, ownerId)),
+    columns: { id: true },
+  })
+  if (!child) throw new Error("Child not found")
+
+  await db.delete(children).where(eq(children.id, childId))
+  revalidatePath("/dashboard")
+}
+
 export async function getChildrenForParent() {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")

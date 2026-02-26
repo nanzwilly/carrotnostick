@@ -4,8 +4,7 @@ import GoalCard from "@/components/GoalCard"
 import CopyLinkButton from "@/components/CopyLinkButton"
 import NudgeCard from "@/components/NudgeCard"
 import InviteButton from "@/components/InviteButton"
-import AvatarDisplay from "@/components/AvatarDisplay"
-import ChangeChildPinButton from "@/components/ChangeChildPinButton"
+import ChildCardHeader from "@/components/ChildCardHeader"
 
 export default async function DashboardPage({
   searchParams,
@@ -87,24 +86,15 @@ export default async function DashboardPage({
           <div key={child.id} className="bg-white rounded-3xl shadow-sm overflow-hidden">
             {/* Child header */}
             <div style={{ backgroundColor: child.color + "20" }}>
-              {/* Row 1: avatar + name + PIN */}
-              <div className="px-6 pt-7 pb-2 flex items-center gap-3">
-                <AvatarDisplay animal={child.avatarEmoji} hat={child.avatarHat} glasses={child.avatarGlasses} avatarConfig={child.avatarConfig} size="xl" />
-                <div className="min-w-0">
-                  <h2 className="text-lg font-bold text-gray-900">{child.name}</h2>
-                  <ChangeChildPinButton childId={child.id} childName={child.name} />
-                </div>
-              </div>
-              {/* Row 2: action buttons, right-aligned */}
-              <div className="px-6 pb-4 flex gap-2 justify-end">
+              <ChildCardHeader child={child}>
                 <CopyLinkButton url={childUrl} />
                 <Link
                   href={`/dashboard/child/${child.id}/new-goal`}
-                  className="text-sm bg-white border border-gray-200 rounded-full px-3 py-1.5 font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
+                  className="text-sm bg-white border border-gray-200 rounded-full px-3 py-1.5 font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap inline-flex items-center"
                 >
                   + Goal
                 </Link>
-              </div>
+              </ChildCardHeader>
             </div>
 
             {/* Goals */}
