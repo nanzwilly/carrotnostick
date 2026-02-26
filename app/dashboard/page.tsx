@@ -98,7 +98,7 @@ export default async function DashboardPage({
             </div>
 
             {/* Goals */}
-            <div className="divide-y-2 divide-gray-100">
+            <div>
               {child.goals.length === 0 && (
                 <div className="px-6 py-8 text-center text-gray-400 text-sm">
                   No goals yet.{" "}
@@ -111,7 +111,12 @@ export default async function DashboardPage({
                 </div>
               )}
               {child.goals.map((goal) => (
-                <GoalCard key={goal.id} goal={goal} />
+                <div
+                  key={goal.id}
+                  className="border-b border-gray-200 shadow-[0_2px_6px_0_rgba(0,0,0,0.04)]"
+                >
+                  <GoalCard goal={goal} />
+                </div>
               ))}
             </div>
 

@@ -36,15 +36,14 @@ export default function LoginForm({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-sm space-y-6">
+    <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center space-y-1">
           <h1 className="text-2xl">
             <LogoText />
           </h1>
           <p className="text-gray-500 text-sm">
-            A star reward system for your family
+            Turn everyday parenting struggles into simple rewards your kids love!
           </p>
         </div>
 
@@ -124,9 +123,8 @@ export default function LoginForm({
         </p>
 
         <p className="text-center text-xs text-gray-400">
-          Kids join using their name and a 4-digit PIN — no account needed.
+          Kids join using their name and a 6-digit PIN — no account needed.
         </p>
-      </div>
     </div>
   )
 }
