@@ -43,7 +43,7 @@ export default function LoginForm({
             <LogoText />
           </h1>
           <p className="text-gray-500 text-sm">
-            Turn everyday parenting struggles into simple rewards your kids love!
+            Turn daily struggles into simple rewards your kids love!
           </p>
         </div>
 
@@ -119,6 +119,13 @@ export default function LoginForm({
           No account?{" "}
           <Link href="/register" className="text-yellow-600 font-semibold hover:underline">
             Create one
+          </Link>
+          . {"< "}2 minutes to get going.
+        </p>
+        <p className="text-center text-xs text-gray-400">
+          Free while we are in early access.{" "}
+          <Link href="/pricing" className="text-orange-500 font-semibold hover:underline">
+            See future pricing plans
           </Link>
         </p>
 

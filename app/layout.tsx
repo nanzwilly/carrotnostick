@@ -3,7 +3,7 @@ import "./globals.css"
 
 export const metadata: Metadata = {
   title: "CarrotNoStick 🥕",
-  description: "Turn everyday parenting struggles into simple rewards your kids love!",
+  description: "Turn daily struggles into simple rewards your kids love!",
 }
 
 export default function RootLayout({

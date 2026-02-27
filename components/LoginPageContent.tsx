@@ -36,6 +36,9 @@ export default function LoginPageContent() {
       <h2 className="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight">
         Make kids build good habits, without punishments
       </h2>
+      <p className="text-sm text-orange-500 mt-1">
+        Free while we are improving the app. Sign up now!
+      </p>
 
       {/* How it works — vertical list with icons */}
       <div className="mt-10 rounded-2xl border border-gray-200 bg-gray-50/50 p-5 shadow-sm">
