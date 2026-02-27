@@ -8,7 +8,6 @@ import { revalidatePath } from "next/cache"
 import { getOwnerIdForUser } from "@/lib/family"
 import type { BigHeadConfig } from "@/components/BigHeadAvatar"
 import bcrypt from "bcryptjs"
-import { getSubStatus } from "@/lib/subscription"
 
 /** Check if a stored PIN value is a bcrypt hash (legacy plaintext PINs are not) */
 function isBcryptHash(value: string) {
@@ -18,16 +17,6 @@ function isBcryptHash(value: string) {
 export async function createChild(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")
-
-  // Check subscription status
-  const dbUser = await db.query.users.findFirst({
-    where: eq(users.id, session.user.id),
-    columns: { email: true, isPremium: true, trialStartedAt: true },
-  })
-  if (dbUser) {
-    const sub = getSubStatus(dbUser)
-    if (sub.status === "expired") throw new Error("SUBSCRIPTION_REQUIRED")
-  }
 
   const name = formData.get("name") as string
   const pin = formData.get("pin") as string

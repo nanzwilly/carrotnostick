@@ -7,9 +7,9 @@ export const size = { width: 1200, height: 630 }
 export const contentType = "image/png"
 
 export default function OpenGraphImage() {
-  const logoPath = path.join(process.cwd(), "public", "logo.png")
-  const logoBuffer = readFileSync(logoPath)
-  const logoDataUrl = `data:image/png;base64,${logoBuffer.toString("base64")}`
+  const iconPath = path.join(process.cwd(), "app", "icon.png")
+  const iconBuffer = readFileSync(iconPath)
+  const iconDataUrl = `data:image/png;base64,${iconBuffer.toString("base64")}`
 
   return new ImageResponse(
     (
@@ -26,19 +26,29 @@ export default function OpenGraphImage() {
         }}
       >
         <img
-          src={logoDataUrl}
-          width={360}
-          height={86}
+          src={iconDataUrl}
+          width={320}
+          height={320}
           alt=""
           style={{ marginBottom: 24 }}
         />
         <span
           style={{
-            fontSize: 28,
+            fontSize: 48,
+            color: "#111827",
+            fontWeight: 700,
+            textAlign: "center",
+          }}
+        >
+          CarrotNoStick
+        </span>
+        <span
+          style={{
+            fontSize: 24,
             color: "#6b7280",
             fontWeight: 500,
             textAlign: "center",
-            maxWidth: 600,
+            marginTop: 12,
           }}
         >
           Turn daily struggles into simple rewards your kids love!

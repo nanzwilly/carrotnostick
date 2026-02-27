@@ -12,9 +12,11 @@ type User = {
 export default function ProfileDropdown({
   user,
   signOut,
+  showStatsLink = false,
 }: {
   user: User
   signOut: () => Promise<void>
+  showStatsLink?: boolean
 }) {
   const [open, setOpen] = useState(false)
   const [imgError, setImgError] = useState(false)
@@ -83,6 +85,16 @@ export default function ProfileDropdown({
 
           {/* Menu items */}
           <div className="py-1">
+            {showStatsLink && (
+              <Link
+                href="/dashboard/stats"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-amber-50 transition-colors"
+              >
+                <span>📊</span>
+                Stats
+              </Link>
+            )}
             <Link
               href="/dashboard/preferences"
               onClick={() => setOpen(false)}

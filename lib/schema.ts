@@ -26,6 +26,7 @@ export const users = pgTable("user", {
   trialStartedAt: timestamp("trial_started_at").defaultNow(),
   isPremium: boolean("is_premium").notNull().default(false),
   razorpaySubscriptionId: text("razorpay_subscription_id"),
+  lastLoginAt: timestamp("last_login_at", { mode: "date" }),
 })
 
 export const accounts = pgTable(

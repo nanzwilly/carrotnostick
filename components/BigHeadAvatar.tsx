@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { BigHead } from "@bigheads/core"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -199,26 +200,47 @@ export default function BigHeadAvatar({
   config: BigHeadConfig
   size?: number
 }) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   return (
     <div style={{ width: size, height: size, display: "inline-block" }}>
-      <BigHead
-        body={config.body}
-        skinTone={config.skinTone}
-        eyes={config.eyes}
-        eyebrows={config.eyebrows}
-        mouth={config.mouth}
-        hair={config.hair}
-        hairColor={config.hairColor}
-        hat={config.hat}
-        hatColor={config.hatColor}
-        clothing={config.clothing}
-        clothingColor={config.clothingColor}
-        accessory={config.accessory}
-        facialHair={config.facialHair}
-        lipColor={config.lipColor}
-        mask={false}
-        graphic="none"
-      />
+      {!mounted ? (
+        <div
+          style={{
+            width: size,
+            height: size,
+            borderRadius: "50%",
+            backgroundColor: "#f3f4f6",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: size * 0.4,
+          }}
+          aria-hidden
+        >
+          👤
+        </div>
+      ) : (
+        <BigHead
+          body={config.body}
+          skinTone={config.skinTone}
+          eyes={config.eyes}
+          eyebrows={config.eyebrows}
+          mouth={config.mouth}
+          hair={config.hair}
+          hairColor={config.hairColor}
+          hat={config.hat}
+          hatColor={config.hatColor}
+          clothing={config.clothing}
+          clothingColor={config.clothingColor}
+          accessory={config.accessory}
+          facialHair={config.facialHair}
+          lipColor={config.lipColor}
+          mask={false}
+          graphic="none"
+        />
+      )}
     </div>
   )
 }

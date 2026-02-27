@@ -56,8 +56,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async jwt({ token, user }) {
-      // Persist the user ID into the token on first sign-in
-      if (user) token.id = user.id
+      // Persist the user ID into the token on first sign-in; record last login
+      if (user?.id) {
+        token.id = user.id
+        await db
+          .update(users)
+          .set({ lastLoginAt: new Date() })
+          .where(eq(users.id, user.id))
+      }
 
       // Always refresh subscription status from DB on sign-in (and periodically via token refresh)
       if (token.id) {
