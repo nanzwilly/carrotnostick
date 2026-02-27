@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://carrotnostick.com"
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <body className="bg-amber-50 min-h-screen antialiased">
         {children}
+        <Analytics />
       </body>
     </html>
   )
