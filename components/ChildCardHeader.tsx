@@ -34,9 +34,12 @@ export default function ChildCardHeader({ child, children: actionRow }: ChildCar
             hideTrigger
           />
           {/* Share and + Goal just below the name */}
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-nowrap gap-2">
             {actionRow}
           </div>
+          <p className="mt-1.5 text-xs text-gray-500">
+            Click on Share to copy the link and share with your child.
+          </p>
         </div>
       </div>
       <ChildCardMenu

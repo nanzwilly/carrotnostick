@@ -1,9 +1,23 @@
 import type { Metadata } from "next"
 import "./globals.css"
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://carrotnostick.com"
+
 export const metadata: Metadata = {
-  title: "CarrotNoStick 🥕",
+  title: "CarrotNoStick",
   description: "Turn daily struggles into simple rewards your kids love!",
+  metadataBase: new URL(baseUrl),
+  openGraph: {
+    title: "CarrotNoStick",
+    description: "Turn daily struggles into simple rewards your kids love!",
+    url: baseUrl,
+    siteName: "CarrotNoStick",
+  },
+  twitter: {
+    card: "summary",
+    title: "CarrotNoStick",
+    description: "Turn daily struggles into simple rewards your kids love!",
+  },
 }
 
 export default function RootLayout({
