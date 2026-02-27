@@ -3,6 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import AvatarDisplay from "@/components/AvatarDisplay"
+import type { BigHeadConfig } from "@/components/BigHeadAvatar"
 import CopyLinkButton from "@/components/CopyLinkButton"
 import TestGoalCard from "@/components/TestGoalCard"
 
@@ -19,7 +20,7 @@ type ChildWithGoals = {
   avatarEmoji: string
   avatarHat: string | null
   avatarGlasses: string | null
-  avatarConfig: unknown
+  avatarConfig: BigHeadConfig | null
   goals: Array<{
     id: string
     name: string
@@ -94,7 +95,7 @@ export default function DashboardTestView({
                     animal={child.avatarEmoji}
                     hat={child.avatarHat}
                     glasses={child.avatarGlasses}
-                    avatarConfig={child.avatarConfig}
+                    avatarConfig={child.avatarConfig as BigHeadConfig | null | undefined}
                     size="sm"
                   />
                   <span className="font-medium truncate text-sm">{child.name}</span>
