@@ -34,9 +34,7 @@ export default async function DashboardLayout({
             href="/dashboard"
             className="flex items-center hover:opacity-80 transition-opacity"
           >
-            <span className="text-lg">
-              <LogoText />
-            </span>
+            <LogoText size="lg" />
           </Link>
 
           <ProfileDropdown user={session.user} signOut={handleSignOut} />

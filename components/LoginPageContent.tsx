@@ -94,7 +94,15 @@ export default function LoginPageContent() {
 
       {/* Footer */}
       <p className="mt-12 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} Carrot·NoStick. All rights reserved.
+        © {new Date().getFullYear()}{" "}
+        <span
+          className="font-bold"
+          style={{ fontFamily: 'Aptos, "Segoe UI", system-ui, sans-serif' }}
+        >
+          <span className="text-gray-900">Carrot</span>
+          <span className="text-orange-600">NoStick</span>
+        </span>
+        . All rights reserved.
       </p>
     </div>
   )

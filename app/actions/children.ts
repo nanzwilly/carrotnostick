@@ -73,6 +73,27 @@ export async function updateChildPin(childId: string, pin: string) {
   revalidatePath("/dashboard")
 }
 
+export async function updateChildProfile(childId: string, updates: { name?: string; color?: string }) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorised")
+
+  const ownerId = await getOwnerIdForUser(session.user.id)
+  const child = await db.query.children.findFirst({
+    where: and(eq(children.id, childId), eq(children.parentId, ownerId)),
+    columns: { id: true },
+  })
+  if (!child) throw new Error("Child not found")
+
+  const set: { name?: string; color?: string } = {}
+  if (updates.name != null && updates.name.trim()) set.name = updates.name.trim()
+  if (updates.color != null) set.color = updates.color
+  if (Object.keys(set).length === 0) return
+
+  await db.update(children).set(set).where(eq(children.id, childId))
+  revalidatePath("/dashboard")
+  revalidatePath(`/dashboard/child/${childId}/edit`)
+}
+
 export async function deleteChild(childId: string) {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")
@@ -86,6 +107,18 @@ export async function deleteChild(childId: string) {
 
   await db.delete(children).where(eq(children.id, childId))
   revalidatePath("/dashboard")
+}
+
+export async function getChildForEdit(childId: string) {
+  const session = await auth()
+  if (!session?.user?.id) return null
+
+  const ownerId = await getOwnerIdForUser(session.user.id)
+  const child = await db.query.children.findFirst({
+    where: and(eq(children.id, childId), eq(children.parentId, ownerId)),
+    columns: { id: true, name: true, color: true },
+  })
+  return child ?? null
 }
 
 export async function getChildrenForParent() {

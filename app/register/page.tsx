@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { registerUser } from "@/app/actions/auth"
+import LogoText from "@/components/Logo"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -39,8 +40,10 @@ export default function RegisterPage() {
       <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center space-y-1">
-          <div className="text-6xl">🥕</div>
-          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <div className="flex justify-center">
+            <LogoText size="lg" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: 'Aptos, "Segoe UI", system-ui, sans-serif' }}>
             Create account
           </h1>
           <p className="text-gray-500 text-sm">

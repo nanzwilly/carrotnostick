@@ -1,12 +1,25 @@
+import Image from "next/image"
+
+const sizeClasses = { sm: "h-8", md: "h-10", lg: "h-14" } as const
+
 /**
- * LogoText — 🥕 Carrot · NoStick
- * The carrot emoji and orange dot are baked in.
- * Font size, weight, and colour context come from the parent element.
+ * CarrotNoStick logo — image (carrot + "Carrot" black, "NoStick" orange, Aptos font).
  */
-export default function LogoText() {
+export default function LogoText({
+  size = "md",
+  className = "",
+}: {
+  size?: keyof typeof sizeClasses
+  className?: string
+}) {
   return (
-    <span className="font-bold tracking-tight whitespace-nowrap text-gray-900">
-      <span style={{ fontSize: '1.5em', lineHeight: 1, display: 'inline-block', verticalAlign: 'middle', marginRight: '0.15em' }}>🥕</span>Carrot<span className="text-orange-400 inline-block relative top-[0.1em]">·</span>NoStick
-    </span>
+    <Image
+      src="/logo.png"
+      alt="CarrotNoStick"
+      width={200}
+      height={48}
+      className={`${sizeClasses[size]} w-auto ${className}`.trim()}
+      priority
+    />
   )
 }

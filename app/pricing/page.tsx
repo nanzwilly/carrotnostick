@@ -1,4 +1,5 @@
 import Link from "next/link"
+import LogoText from "@/components/Logo"
 
 const FEATURES = [
   "Unlimited children",
@@ -14,8 +15,12 @@ export default function PricingPage() {
       <div className="max-w-sm w-full">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🥕</div>
-          <h1 className="text-2xl font-bold text-gray-900">CarrotNoStick Plans</h1>
+          <div className="flex justify-center mb-3">
+            <LogoText size="lg" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Aptos, "Segoe UI", system-ui, sans-serif' }}>
+            Plans
+          </h1>
           <p className="text-orange-500 font-medium mt-2">Free while we are in early access.</p>
           <p className="text-gray-600 text-sm mt-1">No credit card required to start.</p>
         </div>

@@ -39,8 +39,8 @@ export default function LoginForm({
     <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-sm space-y-6">
         {/* Logo */}
         <div className="text-center space-y-1">
-          <h1 className="text-2xl">
-            <LogoText />
+          <h1 className="text-2xl flex justify-center">
+            <LogoText size="lg" />
           </h1>
           <p className="text-gray-500 text-sm">
             Turn daily struggles into simple rewards your kids love!

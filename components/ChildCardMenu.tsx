@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { deleteChild } from "@/app/actions/children"
 
 interface ChildCardMenuProps {
@@ -78,6 +79,14 @@ export default function ChildCardMenu({ childId, childName, onEditPin }: ChildCa
               <span className="text-gray-400">🔑</span>
               Edit pin
             </button>
+            <Link
+              href={`/dashboard/child/${childId}/edit`}
+              onClick={() => setMenuOpen(false)}
+              className="block w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+            >
+              <span className="text-gray-400">✏️</span>
+              Edit profile
+            </Link>
             <button
               type="button"
               onClick={handleDeleteClick}

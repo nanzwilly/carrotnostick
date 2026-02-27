@@ -4,6 +4,7 @@ import { useState } from "react"
 import { createRazorpaySubscription } from "@/app/actions/subscription"
 import { useRouter } from "next/navigation"
 import Script from "next/script"
+import LogoText from "@/components/Logo"
 
 declare global {
   interface Window {
@@ -53,8 +54,12 @@ export default function UpgradePage() {
         <div className="max-w-sm w-full">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="text-5xl mb-3">🥕</div>
-            <h1 className="text-2xl font-bold text-gray-900">Upgrade CarrotNoStick</h1>
+            <div className="flex justify-center mb-3">
+              <LogoText size="lg" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: 'Aptos, "Segoe UI", system-ui, sans-serif' }}>
+              Upgrade
+            </h1>
             <p className="text-gray-600 mt-2">Keep all your family&apos;s progress, forever.</p>
           </div>
 
