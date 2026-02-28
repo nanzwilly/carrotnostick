@@ -84,36 +84,57 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Always refresh subscription status from DB on sign-in (and periodically via token refresh)
       if (token.id) {
-        const dbUser = await db.query.users.findFirst({
-          where: eq(users.id, token.id as string),
-          columns: { email: true, isPremium: true, trialStartedAt: true },
-        })
-        if (dbUser) {
-          // Backfill trialStartedAt for existing users who signed up before this feature
-          if (!dbUser.trialStartedAt) {
-            await db.update(users)
-              .set({ trialStartedAt: new Date() })
-              .where(eq(users.id, token.id as string))
-            dbUser.trialStartedAt = new Date()
+        try {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.id as string),
+            columns: { email: true, isPremium: true, trialStartedAt: true },
+          })
+
+          if (dbUser) {
+            token.email = dbUser.email
+            token.isPremium = dbUser.isPremium
+            token.trialStartedAt = dbUser.trialStartedAt?.toISOString() ?? null
+            const sub = getSubStatus({
+              email: dbUser.email,
+              isPremium: dbUser.isPremium,
+              trialStartedAt: dbUser.trialStartedAt,
+            })
+            token.subStatus = sub.status
+            token.subDaysLeft = sub.daysLeft ?? null
           }
-          token.email = dbUser.email
-          token.isPremium = dbUser.isPremium
-          token.trialStartedAt = dbUser.trialStartedAt?.toISOString() ?? null
-          const sub = getSubStatus({ email: dbUser.email, isPremium: dbUser.isPremium, trialStartedAt: dbUser.trialStartedAt })
-          token.subStatus = sub.status
-          token.subDaysLeft = sub.daysLeft ?? null
+        } catch {
+          // If optional subscription columns aren't migrated yet, don't crash requests.
+          try {
+            const dbUser = await db.query.users.findFirst({
+              where: eq(users.id, token.id as string),
+              columns: { email: true },
+            })
+            if (dbUser) token.email = dbUser.email
+          } catch {
+            // ignore
+          }
+          token.isPremium = false
+          token.trialStartedAt = null
+          token.subStatus = "active"
+          token.subDaysLeft = null
         }
       }
+
+      // Ensure these are always present (prevents runtime crashes in session callback)
+      token.isPremium = (token.isPremium as boolean | undefined) ?? false
+      token.trialStartedAt = (token.trialStartedAt as string | null | undefined) ?? null
+      token.subStatus = (token.subStatus as string | undefined) ?? "active"
+      token.subDaysLeft = (token.subDaysLeft as number | null | undefined) ?? null
 
       return token
     },
     session({ session, token }) {
       // Expose user ID and subscription info from the token to the session
       session.user.id = token.id as string
-      session.user.isPremium = token.isPremium as boolean
-      session.user.trialStartedAt = token.trialStartedAt as string | null
-      session.user.subStatus = token.subStatus as string
-      session.user.subDaysLeft = token.subDaysLeft as number | null
+      session.user.isPremium = Boolean(token.isPremium)
+      session.user.trialStartedAt = (token.trialStartedAt as string | null | undefined) ?? null
+      session.user.subStatus = (token.subStatus as string | undefined) ?? "active"
+      session.user.subDaysLeft = (token.subDaysLeft as number | null | undefined) ?? null
       return session
     },
   },
