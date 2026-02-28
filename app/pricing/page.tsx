@@ -28,7 +28,7 @@ export default function PricingPage() {
         {/* Pricing card */}
         <div className="bg-white rounded-2xl shadow-md border border-amber-100 overflow-hidden">
           <div className="bg-orange-400 text-white px-6 py-5 text-center">
-            <div className="text-2xl font-black leading-tight">₹99 / month (when pricing is introduced)</div>
+            <div className="text-2xl font-black leading-tight">Rs. 69 / month (when pricing is introduced)</div>
             <div className="text-orange-100 text-sm mt-2">Early users will get special pricing</div>
           </div>
 

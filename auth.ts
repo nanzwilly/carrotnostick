@@ -5,12 +5,25 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/lib/db"
 import { users, accounts, sessions, verificationTokens } from "@/lib/schema"
 import { eq } from "drizzle-orm"
+import { pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import bcrypt from "bcryptjs"
 import { getSubStatus } from "@/lib/subscription"
 
+// Keep the Auth adapter mapped to the stable core columns only.
+// This prevents OAuth callback failures when optional app columns
+// (like last_login_at) are not yet present in a deployed database.
+const authUsers = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  email: text("email"),
+  emailVerified: timestamp("emailVerified", { mode: "date" }),
+  image: text("image"),
+  password: text("password"),
+})
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db, {
-    usersTable: users,
+    usersTable: authUsers,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens,
@@ -59,10 +72,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Persist the user ID into the token on first sign-in; record last login
       if (user?.id) {
         token.id = user.id
-        await db
-          .update(users)
-          .set({ lastLoginAt: new Date() })
-          .where(eq(users.id, user.id))
+        try {
+          await db
+            .update(users)
+            .set({ lastLoginAt: new Date() })
+            .where(eq(users.id, user.id))
+        } catch {
+          // Ignore if the optional last_login_at column is not migrated yet.
+        }
       }
 
       // Always refresh subscription status from DB on sign-in (and periodically via token refresh)

@@ -2,6 +2,21 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+## Environment variables
+
+Create a `.env.local` file (see `.env.example`) and set:
+
+- `DATABASE_URL`
+- `AUTH_SECRET`
+- `AUTH_URL` (recommended when using server-side auth helpers)
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+
+For Google OAuth, add this redirect URI in Google Cloud Console:
+
+- `http://localhost:3000/api/auth/callback/google`
+
+If you run the dev server on a different port (e.g. 3001), add that port’s redirect URI too.
+
 First, run the development server:
 
 ```bash

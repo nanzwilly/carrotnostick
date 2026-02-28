@@ -1,5 +1,5 @@
 import { getInviteByToken } from "@/app/actions/invites"
-import { auth, signIn } from "@/auth"
+import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import InviteAuthForm from "./InviteAuthForm"
 
@@ -35,11 +35,6 @@ export default async function InvitePage({
 
   const ownerName = invite.owner?.name ?? "your partner"
 
-  async function googleSignIn() {
-    "use server"
-    await signIn("google", { redirectTo: `/invite/${token}/accept` })
-  }
-
   return (
     <div className="min-h-screen bg-amber-50 flex items-center justify-center px-4">
       <div className="bg-white rounded-3xl shadow-sm p-8 max-w-sm w-full text-center space-y-6">
@@ -53,7 +48,6 @@ export default async function InvitePage({
           </p>
         </div>
         <InviteAuthForm
-          googleSignIn={googleSignIn}
           acceptUrl={`/invite/${token}/accept`}
         />
       </div>
