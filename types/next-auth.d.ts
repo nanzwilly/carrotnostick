@@ -1,4 +1,5 @@
 import "next-auth"
+import "next-auth/jwt"
 
 declare module "next-auth" {
   interface Session {
@@ -9,8 +10,18 @@ declare module "next-auth" {
       image?: string | null
       isPremium: boolean
       trialStartedAt: string | null
-      subStatus: string  // "trialing" | "active" | "expired"
+      subStatus: string
       subDaysLeft: number | null
     }
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id?: string
+    isPremium?: boolean
+    trialStartedAt?: string | null
+    subStatus?: string
+    subDaysLeft?: number | null
   }
 }
