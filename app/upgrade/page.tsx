@@ -66,7 +66,7 @@ export default function UpgradePage() {
           {/* Pricing card */}
           <div className="bg-white rounded-2xl shadow-md border border-amber-100 overflow-hidden">
             <div className="bg-orange-400 text-white px-6 py-5 text-center">
-              <div className="text-4xl font-black">₹299</div>
+              <div className="text-4xl font-black">₹69</div>
               <div className="text-orange-100 text-sm mt-1">per month · cancel anytime</div>
             </div>
 
