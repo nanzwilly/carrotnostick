@@ -4,7 +4,7 @@ import Credentials from "next-auth/providers/credentials"
 import { DrizzleAdapter } from "@auth/drizzle-adapter"
 import { db } from "@/lib/db"
 import { users, accounts, sessions, verificationTokens } from "@/lib/schema"
-import { eq } from "drizzle-orm"
+import { and, eq, isNotNull, sql } from "drizzle-orm"
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core"
 import bcrypt from "bcryptjs"
 import { getSubStatus } from "@/lib/subscription"
@@ -44,7 +44,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = (credentials.email as string).trim().toLowerCase()
 
         const user = await db.query.users.findFirst({
-          where: eq(users.email, email),
+          where: and(
+            sql`lower(${users.email}) = ${email}`,
+            isNotNull(users.password)
+          ),
         })
 
         if (!user || !user.password) return null
