@@ -103,6 +103,14 @@ export default function ProfileDropdown({
               <span>⚙️</span>
               Preferences
             </Link>
+            <a
+              href="mailto:carrotnostick@zohomail.in"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-amber-50 transition-colors"
+            >
+              <span>✉️</span>
+              Support
+            </a>
             <form action={signOut}>
               <button
                 type="submit"

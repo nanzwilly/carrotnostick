@@ -32,13 +32,19 @@ export async function createInviteToken(): Promise<string> {
 
 /** Load invite info for the acceptance page (public — no auth required). */
 export async function getInviteByToken(token: string) {
-  const invite = await db.query.coParentInvites.findFirst({
-    where: eq(coParentInvites.token, token),
-    with: { owner: true },
-  })
-  if (!invite) return null
-  const expired = !!invite.usedAt || invite.expiresAt < new Date()
-  return { ...invite, expired }
+  try {
+    const invite = await db.query.coParentInvites.findFirst({
+      where: eq(coParentInvites.token, token),
+      with: { owner: true },
+    })
+    if (!invite) return null
+    const expired = !!invite.usedAt || invite.expiresAt < new Date()
+    return { ...invite, expired }
+  } catch {
+    // Public invite pages should fail closed and render an "expired" state,
+    // not surface a 500 to visitors.
+    return null
+  }
 }
 
 /** Consume the invite after the co-parent has authenticated. */

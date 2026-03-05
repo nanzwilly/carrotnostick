@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import LogoText from "@/components/Logo"
+import { getLoginHint } from "@/app/actions/auth"
 
 export default function LoginForm({
   justRegistered,
@@ -34,7 +35,12 @@ export default function LoginForm({
 
     const result = await signIn("credentials", { email, password, redirect: false })
     if (result?.error) {
-      setError("Invalid email or password. Please try again.")
+      const hint = await getLoginHint(email)
+      if (hint === "use_google") {
+        setError('This email is linked to Google sign-in. Please use "Continue with Google".')
+      } else {
+        setError("Invalid email or password. Please try again.")
+      }
       setLoading(false)
     } else {
       router.push("/dashboard")

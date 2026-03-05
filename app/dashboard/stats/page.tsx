@@ -2,9 +2,9 @@ import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { db } from "@/lib/db"
-import { users } from "@/lib/schema"
+import { users, children, goals } from "@/lib/schema"
 import { canViewStats } from "@/lib/stats-access"
-import { desc, sql } from "drizzle-orm"
+import { desc, eq, ilike, sql } from "drizzle-orm"
 
 function formatLastLogin(date: Date | string): string {
   const d = typeof date === "string" ? new Date(date) : date
@@ -27,18 +27,49 @@ function formatLastLogin(date: Date | string): string {
   })
 }
 
-export default async function DashboardStatsPage() {
+export default async function DashboardStatsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string }>
+}) {
   const session = await auth()
   if (!session?.user) redirect("/login")
 
   if (!canViewStats(session.user.email)) {
     redirect("/dashboard")
   }
+  const { q } = await searchParams
+  const emailQuery = (q ?? "").trim()
+  const emailFilter = emailQuery ? ilike(users.email, `%${emailQuery}%`) : undefined
 
   const countResult = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(users)
   const totalUsers = countResult[0]?.count ?? 0
+
+  // Children and goals count per parent (for "activation" view)
+  const childCounts = await db
+    .select({
+      parentId: children.parentId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(children)
+    .groupBy(children.parentId)
+  const childCountByParent = Object.fromEntries(
+    childCounts.map((r) => [r.parentId, r.count])
+  )
+
+  const goalCounts = await db
+    .select({
+      parentId: children.parentId,
+      count: sql<number>`count(*)::int`,
+    })
+    .from(goals)
+    .innerJoin(children, eq(goals.childId, children.id))
+    .groupBy(children.parentId)
+  const goalCountByParent = Object.fromEntries(
+    goalCounts.map((r) => [r.parentId, r.count])
+  )
 
   let userList: { id: string; email: string | null; name: string | null; lastLoginAt: Date | null }[] = []
   try {
@@ -50,6 +81,7 @@ export default async function DashboardStatsPage() {
         lastLoginAt: users.lastLoginAt,
       })
       .from(users)
+      .where(emailFilter)
       .orderBy(desc(users.email))
     userList = list
   } catch (err) {
@@ -67,6 +99,7 @@ export default async function DashboardStatsPage() {
           name: users.name,
         })
         .from(users)
+        .where(emailFilter)
         .orderBy(desc(users.email))
       userList = list.map((u) => ({ ...u, lastLoginAt: null }))
     } else {
@@ -87,12 +120,44 @@ export default async function DashboardStatsPage() {
       </div>
 
       <p className="text-gray-600">
-        People who have signed up (have an account and can log in).
+        People who have signed up (have an account and can log in). &quot;Activated&quot; = created at least one child.
       </p>
 
-      <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
-        <p className="text-3xl font-bold text-gray-900">{totalUsers}</p>
-        <p className="text-sm text-gray-500">Total users</p>
+      <form className="rounded-2xl border border-amber-100 bg-white p-4 shadow-sm flex flex-col sm:flex-row gap-2 sm:items-center">
+        <label htmlFor="email-search" className="text-sm text-gray-600 sm:w-36">
+          Find by email
+        </label>
+        <input
+          id="email-search"
+          name="q"
+          defaultValue={emailQuery}
+          placeholder="nancy@tagbeansdigital.com"
+          className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm"
+        />
+        <button
+          type="submit"
+          className="bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl px-4 py-2"
+        >
+          Search
+        </button>
+        {emailQuery && (
+          <Link href="/dashboard/stats" className="text-sm text-gray-500 hover:text-gray-700 px-2 py-2">
+            Clear
+          </Link>
+        )}
+      </form>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
+          <p className="text-3xl font-bold text-gray-900">{totalUsers}</p>
+          <p className="text-sm text-gray-500">Total users</p>
+        </div>
+        <div className="rounded-2xl border border-amber-100 bg-white p-6 shadow-sm">
+          <p className="text-3xl font-bold text-gray-900">
+            {Object.keys(childCountByParent).length}
+          </p>
+          <p className="text-sm text-gray-500">Activated (≥1 child)</p>
+        </div>
       </div>
 
       {userList.length > 0 && (
@@ -108,6 +173,8 @@ export default async function DashboardStatsPage() {
                 <tr className="border-b border-gray-100 text-left text-gray-500">
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Email</th>
+                  <th className="px-4 py-3 font-medium">Children</th>
+                  <th className="px-4 py-3 font-medium">Goals</th>
                   <th className="px-4 py-3 font-medium">Last login</th>
                 </tr>
               </thead>
@@ -121,6 +188,12 @@ export default async function DashboardStatsPage() {
                       {u.name ?? "—"}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{u.email ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {childCountByParent[u.id] ?? 0}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {goalCountByParent[u.id] ?? 0}
+                    </td>
                     <td className="px-4 py-3 text-gray-500">
                       {u.lastLoginAt
                         ? formatLastLogin(u.lastLoginAt)

@@ -12,6 +12,7 @@ export default async function PreferencesPage() {
   // Check if the user has a password (email/password account vs OAuth-only)
   const user = await db.query.users.findFirst({
     where: eq(users.id, session.user.id),
+    columns: { password: true },
   })
 
   const hasPassword = !!user?.password
