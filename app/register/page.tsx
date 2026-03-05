@@ -26,11 +26,11 @@ export default function RegisterPage() {
     setLoading(true)
     setError("")
 
-    try {
-      await registerUser(formData)
+    const result = await registerUser(formData)
+    if (result.success) {
       router.push("/login?registered=1")
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong")
+    } else {
+      setError(result.error)
       setLoading(false)
     }
   }

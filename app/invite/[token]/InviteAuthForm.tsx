@@ -57,24 +57,24 @@ export default function InviteAuthForm({
       setLoading(false)
       return
     }
-    try {
-      await registerUser(fd)
-      // Auto sign-in after registration
-      const result = await signIn("credentials", {
-        email: fd.get("email") as string,
-        password,
-        redirect: false,
-      })
-      if (result?.error) {
-        setError("Account created! Please use the Sign In tab to continue.")
-        setTab("signin")
-        setLoading(false)
-      } else {
-        router.push(acceptUrl)
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.")
+    const regResult = await registerUser(fd)
+    if (!regResult.success) {
+      setError(regResult.error)
       setLoading(false)
+      return
+    }
+    // Auto sign-in after registration
+    const result = await signIn("credentials", {
+      email: fd.get("email") as string,
+      password,
+      redirect: false,
+    })
+    if (result?.error) {
+      setError("Account created! Please use the Sign In tab to continue.")
+      setTab("signin")
+      setLoading(false)
+    } else {
+      router.push(acceptUrl)
     }
   }
 
