@@ -74,6 +74,8 @@ export async function createStarRequest(
   message?: string
 ) {
   // No auth — kid-side action. Validate that the goal actually belongs to this child.
+  if (message && message.trim().length > 500) throw new Error("Message must be 500 characters or less")
+
   const goal = await db.query.goals.findFirst({
     where: and(eq(goals.id, goalId), eq(goals.childId, childId)),
   })

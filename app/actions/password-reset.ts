@@ -45,6 +45,22 @@ export async function requestPasswordReset(formData: FormData): Promise<{ ok: bo
       return { ok: true, message: "If this email exists, a reset link has been sent." }
     }
 
+    // Rate-limit: silently skip sending if a token was already issued in the last 5 minutes.
+    // (A fresh token has expires ≈ now + 60 min; if expires > now + 55 min it's < 5 min old.)
+    const recentTokens = await db
+      .select({ expires: verificationTokens.expires })
+      .from(verificationTokens)
+      .where(
+        and(
+          eq(verificationTokens.identifier, emailRaw),
+          gt(verificationTokens.expires, new Date(Date.now() + 55 * 60 * 1000))
+        )
+      )
+      .limit(1)
+    if (recentTokens.length > 0) {
+      return { ok: true, message: "If this email exists, a reset link has been sent." }
+    }
+
     const token = crypto.randomBytes(32).toString("hex")
     const tokenHash = hashToken(token)
     const expires = new Date(Date.now() + 60 * 60 * 1000)

@@ -26,6 +26,10 @@ export async function createChild(formData: FormData) {
   if (!name || !pin || pin.length !== 6 || !/^\d{6}$/.test(pin)) {
     throw new Error("PIN must be exactly 6 digits")
   }
+  if (name.trim().length === 0) throw new Error("Name is required")
+  if (name.length > 50) throw new Error("Name must be 50 characters or less")
+  if (avatarEmoji.length > 10) throw new Error("Emoji too long")
+  if (color.length > 20) throw new Error("Colour value too long")
 
   // Always attach the new child to the family owner (not the co-parent's own ID)
   const ownerId = await getOwnerIdForUser(session.user.id)
@@ -72,6 +76,9 @@ export async function updateChildProfile(childId: string, updates: { name?: stri
     columns: { id: true },
   })
   if (!child) throw new Error("Child not found")
+
+  if (updates.name != null && updates.name.length > 50) throw new Error("Name must be 50 characters or less")
+  if (updates.color != null && updates.color.length > 20) throw new Error("Colour value too long")
 
   const set: { name?: string; color?: string } = {}
   if (updates.name != null && updates.name.trim()) set.name = updates.name.trim()
@@ -122,8 +129,14 @@ export async function getChildrenForParent() {
       goals: {
         where: (goals, { eq }) => eq(goals.isActive, true),
         with: {
-          starEvents: true,
-          rewardRedemptions: true,
+          starEvents: {
+            orderBy: (se, { desc }) => [desc(se.awardedAt)],
+            limit: 500,
+          },
+          rewardRedemptions: {
+            orderBy: (r, { desc }) => [desc(r.redeemedAt)],
+            limit: 200,
+          },
         },
       },
     },
@@ -146,8 +159,14 @@ async function fetchChildWithGoals(childId: string) {
       goals: {
         where: (goals, { eq }) => eq(goals.isActive, true),
         with: {
-          starEvents: true,
-          rewardRedemptions: true,
+          starEvents: {
+            orderBy: (se, { desc }) => [desc(se.awardedAt)],
+            limit: 500,
+          },
+          rewardRedemptions: {
+            orderBy: (r, { desc }) => [desc(r.redeemedAt)],
+            limit: 200,
+          },
           starRequests: {
             where: (sr, { eq }) => eq(sr.status, "pending"),
           },
@@ -263,8 +282,14 @@ export async function getChildByIdNoPin(childId: string) {
       goals: {
         where: (goals, { eq }) => eq(goals.isActive, true),
         with: {
-          starEvents: true,
-          rewardRedemptions: true,
+          starEvents: {
+            orderBy: (se, { desc }) => [desc(se.awardedAt)],
+            limit: 500,
+          },
+          rewardRedemptions: {
+            orderBy: (r, { desc }) => [desc(r.redeemedAt)],
+            limit: 200,
+          },
           starRequests: {
             where: (sr, { eq }) => eq(sr.status, "pending"),
           },
@@ -288,7 +313,16 @@ export async function getSiblings(childId: string) {
     with: {
       goals: {
         where: (g, { eq }) => eq(g.isActive, true),
-        with: { starEvents: true, rewardRedemptions: true },
+        with: {
+          starEvents: {
+            orderBy: (se, { desc }) => [desc(se.awardedAt)],
+            limit: 500,
+          },
+          rewardRedemptions: {
+            orderBy: (r, { desc }) => [desc(r.redeemedAt)],
+            limit: 200,
+          },
+        },
       },
     },
     orderBy: (c, { asc }) => [asc(c.createdAt)],

@@ -20,6 +20,7 @@ export async function updateName(formData: FormData) {
 
   const name = (formData.get("name") as string)?.trim()
   if (!name) throw new Error("Name is required")
+  if (name.length > 100) throw new Error("Name must be 100 characters or less")
 
   await db.update(users).set({ name }).where(eq(users.id, session.user.id))
   revalidatePath("/dashboard")

@@ -7,6 +7,7 @@ import {
   boolean,
   primaryKey,
   jsonb,
+  index,
 } from "drizzle-orm/pg-core"
 import type { BigHeadConfig } from "@/components/BigHeadAvatar"
 import { relations } from "drizzle-orm"
@@ -86,7 +87,9 @@ export const children = pgTable("children", {
   pinFailedAttempts: integer("pin_failed_attempts").notNull().default(0),
   pinLockedUntil: timestamp("pin_locked_until"),    // null = not locked
   createdAt: timestamp("created_at").defaultNow().notNull(),
-})
+}, (t) => [
+  index("idx_children_parent_id").on(t.parentId),
+])
 
 export const goals = pgTable("goals", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -99,7 +102,9 @@ export const goals = pgTable("goals", {
   rewardDescription: text("reward_description").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-})
+}, (t) => [
+  index("idx_goals_child_id_is_active").on(t.childId, t.isActive),
+])
 
 export const starEvents = pgTable("star_events", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -111,7 +116,9 @@ export const starEvents = pgTable("star_events", {
     .references(() => children.id, { onDelete: "cascade" }),
   note: text("note"),
   awardedAt: timestamp("awarded_at").defaultNow().notNull(),
-})
+}, (t) => [
+  index("idx_star_events_goal_id").on(t.goalId),
+])
 
 export const rewardRedemptions = pgTable("reward_redemptions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -123,7 +130,9 @@ export const rewardRedemptions = pgTable("reward_redemptions", {
     .references(() => children.id, { onDelete: "cascade" }),
   starsUsed: integer("stars_used").notNull(),
   redeemedAt: timestamp("redeemed_at").defaultNow().notNull(),
-})
+}, (t) => [
+  index("idx_reward_redemptions_goal_id").on(t.goalId),
+])
 
 export const starRequests = pgTable("star_requests", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -136,7 +145,10 @@ export const starRequests = pgTable("star_requests", {
   message: text("message"), // optional note from the kid
   status: text("status").notNull().default("pending"), // pending | approved | dismissed
   createdAt: timestamp("created_at").defaultNow().notNull(),
-})
+}, (t) => [
+  index("idx_star_requests_goal_id").on(t.goalId),
+  index("idx_star_requests_child_id_status").on(t.childId, t.status),
+])
 
 export const coParentInvites = pgTable("co_parent_invites", {
   id:        uuid("id").primaryKey().defaultRandom(),
@@ -146,7 +158,9 @@ export const coParentInvites = pgTable("co_parent_invites", {
   usedAt:    timestamp("used_at"),
   usedBy:    text("used_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-})
+}, (t) => [
+  index("idx_co_parent_invites_owner_id").on(t.ownerId),
+])
 
 export const coParents = pgTable(
   "co_parents",
@@ -155,7 +169,10 @@ export const coParents = pgTable(
     coParentId: text("co_parent_id").notNull().references(() => users.id, { onDelete: "cascade" }),
     createdAt:  timestamp("created_at").defaultNow().notNull(),
   },
-  (t) => [primaryKey({ columns: [t.ownerId, t.coParentId] })]
+  (t) => [
+    primaryKey({ columns: [t.ownerId, t.coParentId] }),
+    index("idx_co_parents_co_parent_id").on(t.coParentId),
+  ]
 )
 
 // ─── Relations ────────────────────────────────────────────────────────────────

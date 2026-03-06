@@ -1,12 +1,14 @@
 import { getChildrenForParent } from "@/app/actions/children"
 import Link from "next/link"
 import DashboardTestView from "@/components/DashboardTestView"
+import { redirect } from "next/navigation"
 
 /**
  * Test dashboard page — Stitch-inspired design.
  * Main dashboard is unchanged at /dashboard.
  */
 export default async function DashboardTestPage() {
+  if (process.env.NODE_ENV !== "development") redirect("/dashboard")
   const childrenWithGoals = await getChildrenForParent()
 
   return (

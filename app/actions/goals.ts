@@ -46,6 +46,12 @@ export async function updateGoal(goalId: string, formData: FormData) {
   const starThreshold = parseInt(formData.get("starThreshold") as string) || 5
   const rewardDescription = formData.get("rewardDescription") as string
 
+  if (!name || name.trim().length === 0) throw new Error("Goal name is required")
+  if (name.length > 100) throw new Error("Goal name must be 100 characters or less")
+  if (emoji.length > 10) throw new Error("Emoji too long")
+  if (starThreshold < 1 || starThreshold > 100) throw new Error("Star target must be between 1 and 100")
+  if (rewardDescription && rewardDescription.length > 200) throw new Error("Reward description must be 200 characters or less")
+
   await db
     .update(goals)
     .set({ name, emoji, starThreshold, rewardDescription })
@@ -87,6 +93,12 @@ export async function createGoal(formData: FormData) {
   const emoji = (formData.get("emoji") as string) || "⭐"
   const starThreshold = parseInt(formData.get("starThreshold") as string) || 5
   const rewardDescription = formData.get("rewardDescription") as string
+
+  if (!name || name.trim().length === 0) throw new Error("Goal name is required")
+  if (name.length > 100) throw new Error("Goal name must be 100 characters or less")
+  if (emoji.length > 10) throw new Error("Emoji too long")
+  if (starThreshold < 1 || starThreshold > 100) throw new Error("Star target must be between 1 and 100")
+  if (rewardDescription && rewardDescription.length > 200) throw new Error("Reward description must be 200 characters or less")
 
   // Verify child belongs to this parent (or the parent they're a co-parent of)
   const child = await db.query.children.findFirst({

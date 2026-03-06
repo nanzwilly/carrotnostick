@@ -28,10 +28,12 @@ function formatLastLogin(date: Date | string): string {
   })
 }
 
+const PAGE_SIZE = 50
+
 export default async function DashboardStatsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; reset?: string; target?: string }>
+  searchParams: Promise<{ q?: string; reset?: string; target?: string; page?: string }>
 }) {
   const session = await auth()
   if (!session?.user) redirect("/login")
@@ -40,9 +42,11 @@ export default async function DashboardStatsPage({
     redirect("/dashboard")
   }
 
-  const { q, reset, target } = await searchParams
+  const { q, reset, target, page } = await searchParams
   const emailQuery = (q ?? "").trim()
   const emailFilter = emailQuery ? ilike(users.email, `%${emailQuery}%`) : undefined
+  const currentPage = Math.max(1, parseInt(page ?? "1") || 1)
+  const offset = (currentPage - 1) * PAGE_SIZE
 
   async function resetPasswordAction(formData: FormData) {
     "use server"
@@ -127,6 +131,8 @@ export default async function DashboardStatsPage({
       .from(users)
       .where(emailFilter)
       .orderBy(desc(users.email))
+      .limit(PAGE_SIZE)
+      .offset(offset)
     userList = list
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
@@ -140,6 +146,8 @@ export default async function DashboardStatsPage({
         .from(users)
         .where(emailFilter)
         .orderBy(desc(users.email))
+        .limit(PAGE_SIZE)
+        .offset(offset)
       userList = list.map((u) => ({ ...u, lastLoginAt: null }))
     } else {
       throw err
@@ -207,8 +215,9 @@ export default async function DashboardStatsPage({
 
       {userList.length > 0 && (
         <div className="rounded-2xl border border-amber-100 bg-white shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-amber-50/50">
+          <div className="px-4 py-3 border-b border-gray-100 bg-amber-50/50 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-700">All users (by email)</h2>
+            <span className="text-xs text-gray-500">Page {currentPage}</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -259,6 +268,30 @@ export default async function DashboardStatsPage({
                 ))}
               </tbody>
             </table>
+          </div>
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 text-sm">
+            <span className="text-gray-500">
+              Showing {offset + 1}–{offset + userList.length}
+            </span>
+            <div className="flex gap-2">
+              {currentPage > 1 && (
+                <Link
+                  href={`/dashboard/stats?${new URLSearchParams({ ...(emailQuery ? { q: emailQuery } : {}), page: String(currentPage - 1) }).toString()}`}
+                  className="rounded-lg border border-gray-200 px-3 py-1 text-gray-600 hover:bg-gray-50"
+                >
+                  ← Prev
+                </Link>
+              )}
+              {userList.length === PAGE_SIZE && (
+                <Link
+                  href={`/dashboard/stats?${new URLSearchParams({ ...(emailQuery ? { q: emailQuery } : {}), page: String(currentPage + 1) }).toString()}`}
+                  className="rounded-lg border border-gray-200 px-3 py-1 text-gray-600 hover:bg-gray-50"
+                >
+                  Next →
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}
