@@ -79,6 +79,14 @@ The project uses `drizzle-kit push` (NOT `drizzle-kit migrate`). There is **no `
 - `nanzwilly@gmail.com` — founder, free account, can view `/dashboard/stats`
 - Stats access controlled by `lib/stats-access.ts` → `canViewStats(email)`
 
+### Git Commits — Always Commit Everything
+**Before making any targeted commit, always run `git status` first.**
+If there are other modified or untracked files outside the intended change, include them in the same commit (or a follow-up commit in the same push) — never leave them behind.
+
+Leaving files uncommitted while pushing other changes causes features to silently disappear from production (Vercel deploys what's in git, not what's on disk).
+
+**Rule:** Every push to `master` should leave `git status` clean.
+
 ---
 
 ## Environment Variables (Vercel)
