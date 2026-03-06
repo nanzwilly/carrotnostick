@@ -1,7 +1,6 @@
 /** Emails that can view dashboard stats (e.g. who has signed up). */
 export const STATS_VIEWER_EMAILS = [
   "nanzwilly@gmail.com",
-  "nancy@tagbeansdigital.com",
 ]
 
 export function canViewStats(email: string | null | undefined): boolean {

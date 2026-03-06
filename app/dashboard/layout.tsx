@@ -22,7 +22,7 @@ export default async function DashboardLayout({
     <div className="min-h-screen">
       {/* Header */}
       <header className="bg-white border-b border-amber-100 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link
             href="/dashboard"
             className="flex items-center hover:opacity-80 transition-opacity"
@@ -38,7 +38,7 @@ export default async function DashboardLayout({
         </div>
       </header>
 
-      <main className="max-w-2xl mx-auto px-4 py-8">{children}</main>
+      <main className="max-w-5xl mx-auto px-4 py-8">{children}</main>
     </div>
   )
 }

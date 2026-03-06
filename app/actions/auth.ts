@@ -3,10 +3,19 @@
 import { db } from "@/lib/db"
 import { users } from "@/lib/schema"
 import { sql } from "drizzle-orm"
+import { pgTable, text } from "drizzle-orm/pg-core"
 import bcrypt from "bcryptjs"
 
 export type RegisterResult = { success: true } | { success: false; error: string }
 export type LoginHint = "use_google" | "invalid_credentials"
+
+// Minimal auth-safe user mapping (avoid optional app columns on legacy DBs).
+const authUsersCore = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  email: text("email"),
+  password: text("password"),
+})
 
 function toErrorText(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
@@ -38,16 +47,20 @@ export async function registerUser(formData: FormData): Promise<RegisterResult> 
     // Check if user already exists. Fallback if production schema is behind.
     let existing: { id: string; password: string | null } | { id: string } | undefined
     try {
-      existing = await db.query.users.findFirst({
-        where: sql`lower(${users.email}) = ${email}`,
-        columns: { id: true, password: true },
-      })
+      const rows = await db
+        .select({ id: authUsersCore.id, password: authUsersCore.password })
+        .from(authUsersCore)
+        .where(sql`lower(${authUsersCore.email}) = ${email}`)
+        .limit(1)
+      existing = rows[0]
     } catch (err) {
       if (!isMissingPasswordColumnError(err)) throw err
-      existing = await db.query.users.findFirst({
-        where: sql`lower(${users.email}) = ${email}`,
-        columns: { id: true },
-      })
+      const rows = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(sql`lower(${users.email}) = ${email}`)
+        .limit(1)
+      existing = rows[0]
     }
 
     if (existing) {
@@ -63,7 +76,7 @@ export async function registerUser(formData: FormData): Promise<RegisterResult> 
     const hashedPassword = await bcrypt.hash(password, 12)
 
     try {
-      await db.insert(users).values({
+      await db.insert(authUsersCore).values({
         id: crypto.randomUUID(),
         email,
         name: name || email.split("@")[0],
@@ -74,7 +87,7 @@ export async function registerUser(formData: FormData): Promise<RegisterResult> 
 
       // Emergency self-heal for production if password column migration was missed.
       await ensurePasswordColumnExists()
-      await db.insert(users).values({
+      await db.insert(authUsersCore).values({
         id: crypto.randomUUID(),
         email,
         name: name || email.split("@")[0],
@@ -111,10 +124,12 @@ export async function getLoginHint(emailInput: string): Promise<LoginHint> {
     const email = emailInput.trim().toLowerCase()
     if (!email || !email.includes("@")) return "invalid_credentials"
 
-    const user = await db.query.users.findFirst({
-      where: sql`lower(${users.email}) = ${email}`,
-      columns: { id: true, password: true },
-    })
+    const rows = await db
+      .select({ id: authUsersCore.id, password: authUsersCore.password })
+      .from(authUsersCore)
+      .where(sql`lower(${authUsersCore.email}) = ${email}`)
+      .limit(1)
+    const user = rows[0]
 
     if (user && !user.password) return "use_google"
     return "invalid_credentials"

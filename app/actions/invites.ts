@@ -4,7 +4,14 @@ import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { coParentInvites, coParents } from "@/lib/schema"
 import { eq, and, gt, isNull } from "drizzle-orm"
+import { pgTable, text } from "drizzle-orm/pg-core"
 import { getOwnerIdForUser } from "@/lib/family"
+
+// Use a minimal user projection to avoid optional-column schema drift issues.
+const authUsersCore = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+})
 
 /** Generate an invite token for the current user's family. Invalidates any prior unused token. */
 export async function createInviteToken(): Promise<string> {
@@ -33,13 +40,18 @@ export async function createInviteToken(): Promise<string> {
 /** Load invite info for the acceptance page (public — no auth required). */
 export async function getInviteByToken(token: string) {
   try {
-    const invite = await db.query.coParentInvites.findFirst({
-      where: eq(coParentInvites.token, token),
-      with: { owner: true },
-    })
+    const invite = await db.query.coParentInvites.findFirst({ where: eq(coParentInvites.token, token) })
     if (!invite) return null
+
+    const ownerRows = await db
+      .select({ name: authUsersCore.name })
+      .from(authUsersCore)
+      .where(eq(authUsersCore.id, invite.ownerId))
+      .limit(1)
+    const owner = ownerRows[0] ?? null
+
     const expired = !!invite.usedAt || invite.expiresAt < new Date()
-    return { ...invite, expired }
+    return { ...invite, owner, expired }
   } catch {
     // Public invite pages should fail closed and render an "expired" state,
     // not surface a 500 to visitors.

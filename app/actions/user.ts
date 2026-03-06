@@ -3,9 +3,16 @@
 import { db } from "@/lib/db"
 import { users } from "@/lib/schema"
 import { eq } from "drizzle-orm"
+import { pgTable, text } from "drizzle-orm/pg-core"
 import { auth } from "@/auth"
 import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
+
+const authUsersCore = pgTable("user", {
+  id: text("id").primaryKey(),
+  name: text("name"),
+  password: text("password"),
+})
 
 export async function updateName(formData: FormData) {
   const session = await auth()
@@ -34,11 +41,15 @@ export async function updatePassword(formData: FormData) {
   if (newPassword !== confirmPassword)
     throw new Error("New passwords don't match")
 
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, session.user.id),
-  })
-  if (!user || !user.password)
-    throw new Error("No password set — this account uses Google sign-in")
+  const rows = await db
+    .select({ id: authUsersCore.id, password: authUsersCore.password })
+    .from(authUsersCore)
+    .where(eq(authUsersCore.id, session.user.id))
+    .limit(1)
+  const user = rows[0]
+
+  if (!user?.password)
+    throw new Error("No password set - this account uses Google sign-in")
 
   const match = await bcrypt.compare(currentPassword, user.password)
   if (!match) throw new Error("Current password is incorrect")

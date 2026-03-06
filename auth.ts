@@ -43,12 +43,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const email = (credentials.email as string).trim().toLowerCase()
 
-        const user = await db.query.users.findFirst({
-          where: and(
-            sql`lower(${users.email}) = ${email}`,
-            isNotNull(users.password)
-          ),
-        })
+        const rows = await db
+          .select({
+            id: authUsers.id,
+            email: authUsers.email,
+            name: authUsers.name,
+            image: authUsers.image,
+            password: authUsers.password,
+          })
+          .from(authUsers)
+          .where(
+            and(
+              sql`lower(${authUsers.email}) = ${email}`,
+              isNotNull(authUsers.password)
+            )
+          )
+          .limit(1)
+        const user = rows[0]
 
         if (!user || !user.password) return null
 

@@ -24,7 +24,6 @@ export default function LoginForm({
   const handleGoogle = async () => {
     setGoogleLoading(true)
     setError("")
-    // Redirects to Google, then back to callbackUrl.
     await signIn("google", { callbackUrl: "/dashboard" })
   }
 
@@ -32,118 +31,133 @@ export default function LoginForm({
     e.preventDefault()
     setLoading(true)
     setError("")
+    const normalizedEmail = email.trim().toLowerCase()
 
-    const result = await signIn("credentials", { email, password, redirect: false })
-    if (result?.error) {
-      const hint = await getLoginHint(email)
-      if (hint === "use_google") {
-        setError('This email is linked to Google sign-in. Please use "Continue with Google".')
-      } else {
-        setError("Invalid email or password. Please try again.")
+    try {
+      const result = await signIn("credentials", {
+        email: normalizedEmail,
+        password,
+        redirect: false,
+      })
+
+      if (result?.error) {
+        if (result.error === "CredentialsSignin") {
+          const hint = await getLoginHint(normalizedEmail)
+          if (hint === "use_google") {
+            setError('This email is linked to Google sign-in. Please use "Continue with Google".')
+          } else {
+            setError("Invalid email or password. Please try again.")
+          }
+        } else {
+          setError(`Sign-in failed (${result.error}). Please try again.`)
+        }
+        setLoading(false)
+        return
       }
-      setLoading(false)
-    } else {
+
       router.push("/dashboard")
+    } catch {
+      setError("Sign-in failed due to a network or server issue. Please try again.")
+      setLoading(false)
     }
   }
 
   return (
     <div className="bg-white rounded-3xl shadow-sm p-10 w-full max-w-sm space-y-6">
-        {/* Logo */}
-        <div className="text-center space-y-1">
-          <h1 className="text-2xl flex justify-center">
-            <LogoText size="lg" />
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Turn daily struggles into simple rewards your kids love!
-          </p>
+      <div className="text-center space-y-1">
+        <h1 className="text-2xl flex justify-center">
+          <LogoText size="lg" />
+        </h1>
+        <p className="text-gray-500 text-sm">
+          Turn daily struggles into simple rewards your kids love!
+        </p>
+      </div>
+
+      {justRegistered && (
+        <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-sm text-green-700 text-center">
+          Account created! Sign in below.
         </div>
+      )}
+      {passwordChanged && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 text-sm text-blue-700 text-center">
+          Password updated. Please sign in again.
+        </div>
+      )}
 
-        {/* Success banners */}
-        {justRegistered && (
-          <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-sm text-green-700 text-center">
-            Account created! Sign in below.
+      <button
+        type="button"
+        onClick={handleGoogle}
+        disabled={googleLoading}
+        className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm"
+      >
+        <svg className="w-5 h-5" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+        </svg>
+        {googleLoading ? "Continuing..." : "Continue with Google"}
+      </button>
+
+      <div className="flex items-center gap-3">
+        <div className="flex-1 border-t border-gray-100" />
+        <span className="text-xs text-gray-400">or</span>
+        <div className="flex-1 border-t border-gray-100" />
+      </div>
+
+      <form onSubmit={handleCredentials} className="space-y-3">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-600 text-center">
+            {error}
           </div>
         )}
-        {passwordChanged && (
-          <div className="bg-blue-50 border border-blue-200 rounded-2xl px-4 py-3 text-sm text-blue-700 text-center">
-            Password updated. Please sign in again.
-          </div>
-        )}
-
-        {/* Google sign-in */}
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
+        />
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
+        />
         <button
-          type="button"
-          onClick={handleGoogle}
-          disabled={googleLoading}
-          className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors shadow-sm"
+          type="submit"
+          disabled={loading}
+          className="w-full bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-2xl py-3 text-sm transition-colors"
         >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-          </svg>
-          {googleLoading ? "Continuing…" : "Continue with Google"}
+          {loading ? "Signing in..." : "Sign in"}
         </button>
-
-        {/* Divider */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 border-t border-gray-100" />
-          <span className="text-xs text-gray-400">or</span>
-          <div className="flex-1 border-t border-gray-100" />
+        <div className="text-right">
+          <Link href="/forgot-password" className="text-xs text-gray-500 hover:text-gray-700 hover:underline">
+            Forgot password?
+          </Link>
         </div>
+      </form>
 
-        {/* Email / password form */}
-        <form onSubmit={handleCredentials} className="space-y-3">
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 text-sm text-red-600 text-center">
-              {error}
-            </div>
-          )}
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full border border-gray-200 rounded-2xl px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent transition"
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-2xl py-3 text-sm transition-colors"
-          >
-            {loading ? "Signing in…" : "Sign in"}
-          </button>
-        </form>
+      <p className="text-center text-xs text-gray-400">
+        No account?{" "}
+        <Link href="/register" className="text-yellow-600 font-semibold hover:underline">
+          Create one
+        </Link>
+        . {"< "}2 minutes to get going.
+      </p>
+      <p className="text-center text-xs text-gray-400">
+        Free while we are in early access.{" "}
+        <Link href="/pricing" className="text-orange-500 font-semibold hover:underline">
+          See future pricing plans
+        </Link>
+      </p>
 
-        {/* Register link */}
-        <p className="text-center text-xs text-gray-400">
-          No account?{" "}
-          <Link href="/register" className="text-yellow-600 font-semibold hover:underline">
-            Create one
-          </Link>
-          . {"< "}2 minutes to get going.
-        </p>
-        <p className="text-center text-xs text-gray-400">
-          Free while we are in early access.{" "}
-          <Link href="/pricing" className="text-orange-500 font-semibold hover:underline">
-            See future pricing plans
-          </Link>
-        </p>
-
-        <p className="text-center text-xs text-gray-400">
-          Kids join using their name and a 6-digit PIN — no account needed.
-        </p>
+      <p className="text-center text-xs text-gray-400">
+        Kids join using their name and a 6-digit PIN - no account needed.
+      </p>
     </div>
   )
 }

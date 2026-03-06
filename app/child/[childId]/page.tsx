@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { verifyChildPin, getSiblings, getChildByIdNoPin, saveBigHeadConfig } from "@/app/actions/children"
 import { createStarRequest } from "@/app/actions/stars"
 import type { Child, Goal, StarEvent, RewardRedemption, StarRequest } from "@/lib/schema"
@@ -32,6 +32,10 @@ function computeTotalStars(goals: Array<{ starEvents: unknown[]; rewardRedemptio
   )
 }
 
+function computeAwardedStars(goals: Array<{ starEvents: unknown[] }>) {
+  return goals.reduce((sum, g) => sum + g.starEvents.length, 0)
+}
+
 export default function ChildPage() {
   const params = useParams()
   const childId = params.childId as string
@@ -42,6 +46,10 @@ export default function ChildPage() {
   const [loading, setLoading] = useState(false)
   // True while we check localStorage on first render (prevents PIN screen flash)
   const [sessionLoading, setSessionLoading] = useState(true)
+  const [showLoginConfetti, setShowLoginConfetti] = useState(false)
+  const [newStarsCount, setNewStarsCount] = useState(0)
+  const [confettiBursts, setConfettiBursts] = useState(0)
+  const confettiTimeoutRef = useRef<number | null>(null)
 
   // ── Restore 30-day session from localStorage ────────────────────────────────
   useEffect(() => {
@@ -57,12 +65,7 @@ export default function ChildPage() {
             const result = await getChildByIdNoPin(childId)
             if (!cancelled && result) {
               const c = result as ChildWithGoals
-              const alreadyNudged = new Set(
-                c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
-              )
-              setNudgedGoals(alreadyNudged)
-              setEditConfig(c.avatarConfig ?? DEFAULT_BIGHEAD_CONFIG)
-              setChild(c)
+              applyChildSessionData(c)
               localStorage.setItem(SESSION_KEY, JSON.stringify({ expiry: Date.now() + 30 * 24 * 60 * 60 * 1000 }))
             }
           }
@@ -79,6 +82,14 @@ export default function ChildPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    return () => {
+      if (confettiTimeoutRef.current) {
+        window.clearTimeout(confettiTimeoutRef.current)
+      }
+    }
+  }, [])
+
   // Track which goals this kid has already nudged this session
   const [nudgedGoals, setNudgedGoals] = useState<Set<string>>(new Set())
 
@@ -92,6 +103,41 @@ export default function ChildPage() {
   const [showLeaderboard, setShowLeaderboard] = useState(false)
   const [siblings, setSiblings] = useState<SiblingWithGoals[] | null>(null)
   const [siblingsLoading, setSiblingsLoading] = useState(false)
+
+  const applyChildSessionData = (c: ChildWithGoals) => {
+    const alreadyNudged = new Set(
+      c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
+    )
+    setNudgedGoals(alreadyNudged)
+    setEditConfig(c.avatarConfig ?? DEFAULT_BIGHEAD_CONFIG)
+    setChild(c)
+
+    try {
+      const seenKey = `cns_child_seen_stars_${childId}`
+      const awardedStars = computeAwardedStars(c.goals)
+      const prevRaw = localStorage.getItem(seenKey)
+      const previousSeen = prevRaw ? Number(prevRaw) : 0
+
+      if (Number.isFinite(previousSeen) && awardedStars > previousSeen) {
+        const delta = awardedStars - previousSeen
+        setNewStarsCount(delta)
+        setConfettiBursts(Math.min(delta, 8))
+        setShowLoginConfetti(true)
+
+        if (confettiTimeoutRef.current) {
+          window.clearTimeout(confettiTimeoutRef.current)
+        }
+        confettiTimeoutRef.current = window.setTimeout(() => {
+          setShowLoginConfetti(false)
+          setConfettiBursts(0)
+        }, 2200 + delta * 450)
+      }
+
+      localStorage.setItem(seenKey, String(awardedStars))
+    } catch {
+      // ignore localStorage issues
+    }
+  }
 
   const handleShowLeaderboard = async () => {
     setShowLeaderboard(true)
@@ -135,12 +181,7 @@ export default function ChildPage() {
     }
     // status === "ok"
     const c = result.child as ChildWithGoals
-    const alreadyNudged = new Set(
-      c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
-    )
-    setNudgedGoals(alreadyNudged)
-    setEditConfig(c.avatarConfig ?? DEFAULT_BIGHEAD_CONFIG)
-    setChild(c)
+    applyChildSessionData(c)
     try {
       localStorage.setItem(
         `cns_child_${childId}`,
@@ -204,11 +245,14 @@ export default function ChildPage() {
   }
 
   // The config to show in the header (live-updates as the editor changes)
-  const displayConfig = child.avatarConfig ?? editConfig
 
   // ── Star view ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen" style={{ backgroundColor: child.color + "15" }}>
+      {showLoginConfetti && (
+        <LoginStarConfetti burstCount={confettiBursts} newStarsCount={newStarsCount} />
+      )}
+
       {/* Top logo bar */}
       <div className="bg-white/70 backdrop-blur-sm border-b border-white/60 px-4 py-3 text-center">
         <span className="font-bold text-gray-800 text-base tracking-tight">
@@ -588,3 +632,46 @@ function ChildStarDisplay({ current, total, color }: { current: number; total: n
     </div>
   )
 }
+
+function LoginStarConfetti({
+  burstCount,
+  newStarsCount,
+}: {
+  burstCount: number
+  newStarsCount: number
+}) {
+  return (
+    <div className="fixed inset-0 z-40 pointer-events-none overflow-hidden">
+      {Array.from({ length: burstCount }).map((_, burstIndex) =>
+        Array.from({ length: 16 }).map((_, pieceIndex) => {
+          const left = (burstIndex * 13 + pieceIndex * 7) % 100
+          const delay = burstIndex * 0.45 + (pieceIndex % 5) * 0.05
+          const duration = 1.4 + (pieceIndex % 4) * 0.2
+          const symbol = pieceIndex % 3 === 0 ? "⭐" : pieceIndex % 3 === 1 ? "✨" : "🎉"
+
+          return (
+            <span
+              key={`${burstIndex}-${pieceIndex}`}
+              className="confetti-piece absolute top-0 text-2xl"
+              style={{
+                left: `${left}%`,
+                animationDelay: `${delay}s`,
+                animationDuration: `${duration}s`,
+              }}
+            >
+              {symbol}
+            </span>
+          )
+        })
+      )}
+
+      <div className="absolute top-16 left-1/2 -translate-x-1/2 rounded-full bg-white/90 px-4 py-2 shadow-sm border border-amber-100">
+        <p className="text-sm font-bold text-amber-600">
+          +{newStarsCount} new star{newStarsCount === 1 ? "" : "s"} earned!
+        </p>
+      </div>
+    </div>
+  )
+}
+
+
