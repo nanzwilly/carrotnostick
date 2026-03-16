@@ -51,32 +51,32 @@ export default async function DashboardPage({
         </div>
       )}
 
-      {/* Action buttons — above heading so they're visible on mobile */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <NotificationBell initialCount={unreadNotifications} />
-        <Link
-          href="/dashboard/activity"
-          className="text-sm bg-white border border-gray-200 rounded-full px-3 py-2 font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
-        >
-          📜 Activity
-        </Link>
-        <Link
-          href="/dashboard/shop"
-          className="text-sm bg-white border border-gray-200 rounded-full px-3 py-2 font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
-        >
-          🛒 Shop
-        </Link>
-        <InviteButton />
-        <Link
-          href="/dashboard/new-child"
-          className="bg-orange-500 text-white rounded-full px-4 py-2 text-sm font-semibold hover:bg-orange-600 transition-colors whitespace-nowrap text-center"
-        >
-          + Add child
-        </Link>
+      {/* Page title + action buttons */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 order-2 md:order-1">Your family</h1>
+        <div className="flex items-center gap-2 flex-wrap order-1 md:order-2">
+          <NotificationBell initialCount={unreadNotifications} />
+          <Link
+            href="/dashboard/activity"
+            className="text-sm bg-white border border-gray-200 rounded-full px-3 py-2 font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
+          >
+            📜 Activity
+          </Link>
+          <Link
+            href="/dashboard/shop"
+            className="text-sm bg-white border border-gray-200 rounded-full px-3 py-2 font-medium text-gray-600 hover:bg-gray-50 transition-colors whitespace-nowrap"
+          >
+            🛒 Shop
+          </Link>
+          <InviteButton />
+          <Link
+            href="/dashboard/new-child"
+            className="bg-orange-500 text-white rounded-full px-4 py-2 text-sm font-semibold hover:bg-orange-600 transition-colors whitespace-nowrap text-center"
+          >
+            + Add child
+          </Link>
+        </div>
       </div>
-
-      {/* Page title */}
-      <h1 className="text-2xl font-bold text-gray-900">Your family</h1>
 
       {/* Empty state */}
       {childrenWithGoals.length === 0 && (
