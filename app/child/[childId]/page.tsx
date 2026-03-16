@@ -16,6 +16,7 @@ import BigHeadAvatar, {
   DEFAULT_BIGHEAD_CONFIG,
   EDITOR_CATEGORIES,
 } from "@/components/BigHeadAvatar"
+import HangmanGame from "@/components/HangmanGame"
 
 type GoalWithEvents = Goal & {
   starEvents: StarEvent[]
@@ -114,6 +115,10 @@ export default function ChildPage() {
   const [shopLoading, setShopLoading] = useState(false)
   const [purchaseMsg, setPurchaseMsg] = useState("")
 
+  // Hangman game
+  const [showGame, setShowGame] = useState(false)
+  const [gameUnlocked, setGameUnlocked] = useState(false)
+
   // Wishlist
   const [showWishlist, setShowWishlist] = useState(false)
   const [wishlistItems, setWishlistItems] = useState<ChildWishlistItem[]>([])
@@ -140,6 +145,7 @@ export default function ChildPage() {
         setNewStarsCount(delta)
         setConfettiBursts(Math.min(delta, 8))
         setShowLoginConfetti(true)
+        setGameUnlocked(true)
 
         if (confettiTimeoutRef.current) {
           window.clearTimeout(confettiTimeoutRef.current)
@@ -703,6 +709,22 @@ export default function ChildPage() {
           </div>
         )}
 
+        {/* ── Hangman game modal ─────────────────────────────────────────── */}
+        {showGame && (
+          <HangmanGame color={child.color} onClose={() => setShowGame(false)} />
+        )}
+
+        {/* Game unlocked banner */}
+        {gameUnlocked && !showGame && (
+          <button
+            onClick={() => { setShowGame(true); setGameUnlocked(false) }}
+            className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-2xl px-4 py-4 text-center animate-pulse hover:animate-none transition-all"
+          >
+            <p className="text-lg font-black">🎮 Game Unlocked!</p>
+            <p className="text-sm opacity-90">You earned a star — tap to play Hangman!</p>
+          </button>
+        )}
+
         {/* Goal cards */}
         {child.goals.length === 0 && (
           <div className="bg-white rounded-3xl p-8 text-center text-gray-400">
@@ -749,6 +771,12 @@ export default function ChildPage() {
             className="w-full bg-white border-2 border-purple-300 hover:bg-purple-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
           >
             💫 My Wishes
+          </button>
+          <button
+            onClick={() => setShowGame(true)}
+            className="w-full bg-white border-2 border-pink-300 hover:bg-pink-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            🎮 Play Hangman
           </button>
           <button
             onClick={handleShowLeaderboard}
