@@ -64,6 +64,13 @@
       "when": 1741233600000,
       "tag": "0008_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1773643414682,
+      "tag": "0009_giant_namora",
+      "breakpoints": true
     }
   ]
 }

@@ -2,14 +2,18 @@
 
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { starEvents, rewardRedemptions, goals, children, starRequests } from "@/lib/schema"
-import { eq, and, count } from "drizzle-orm"
+import { starEvents, rewardRedemptions, goals, children, starRequests, streaks } from "@/lib/schema"
+import { eq, and, count, sum } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { canAccessFamily } from "@/lib/family"
+import { notifyParentOfNudge, notifyStreakMilestone } from "./notifications"
 
-export async function giveStar(goalId: string, note?: string) {
+export async function giveStar(goalId: string, note?: string, quantity: number = 1) {
   const session = await auth()
   if (!session?.user?.id) throw new Error("Unauthorised")
+
+  // Validate quantity
+  const qty = Math.max(1, Math.min(Math.floor(quantity), 10))
 
   // Verify the goal belongs to a child of this parent
   const goal = await db.query.goals.findFirst({
@@ -19,16 +23,17 @@ export async function giveStar(goalId: string, note?: string) {
   if (!goal || !(await canAccessFamily(session.user.id, goal.child.parentId)))
     throw new Error("Unauthorised")
 
-  // Record the star
+  // Record the star(s)
   await db.insert(starEvents).values({
     goalId,
     childId: goal.childId,
     note: note || null,
+    quantity: qty,
   })
 
-  // Count unredeemed stars for this goal
+  // Count unredeemed stars for this goal (using sum of quantities)
   const [totalStars] = await db
-    .select({ count: count() })
+    .select({ total: sum(starEvents.quantity) })
     .from(starEvents)
     .where(eq(starEvents.goalId, goalId))
 
@@ -38,11 +43,22 @@ export async function giveStar(goalId: string, note?: string) {
     .where(eq(rewardRedemptions.goalId, goalId))
 
   const redeemedStars = (totalRedeemed?.count ?? 0) * goal.starThreshold
-  const unredeemedStars = (totalStars?.count ?? 0) - redeemedStars
+  const unredeemedStars = Number(totalStars?.total ?? 0) - redeemedStars
   const rewardReached = unredeemedStars >= goal.starThreshold
 
+  // Update streak
+  const streakInfo = await updateStreak(goalId, goal.childId)
+
+  // Notify parent about streak milestones (fire-and-forget)
+  if (streakInfo && "currentStreak" in streakInfo) {
+    notifyStreakMilestone(
+      goal.child.parentId, goal.child.name, goal.name,
+      streakInfo.currentStreak, goal.childId, goalId,
+    ).catch(() => {})
+  }
+
   revalidatePath("/dashboard")
-  return { rewardReached, unredeemedStars, goal }
+  return { rewardReached, unredeemedStars, goal, streak: streakInfo }
 }
 
 export async function redeemReward(goalId: string) {
@@ -66,6 +82,63 @@ export async function redeemReward(goalId: string) {
   return goal
 }
 
+// ─── Streak tracking ────────────────────────────────────────────────────────
+
+async function updateStreak(goalId: string, childId: string) {
+  const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+
+  const existing = await db.query.streaks.findFirst({
+    where: and(eq(streaks.goalId, goalId), eq(streaks.childId, childId)),
+  })
+
+  if (!existing) {
+    // First star ever for this goal
+    const [s] = await db.insert(streaks).values({
+      goalId,
+      childId,
+      currentStreak: 1,
+      longestStreak: 1,
+      lastStarDate: today,
+    }).returning()
+    return s
+  }
+
+  if (existing.lastStarDate === today) {
+    // Already got a star today — no streak change
+    return existing
+  }
+
+  const lastDate = existing.lastStarDate ? new Date(existing.lastStarDate) : null
+  const todayDate = new Date(today)
+  const diffDays = lastDate
+    ? Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
+    : 999
+
+  let newStreak: number
+  if (diffDays === 1) {
+    // Consecutive day — extend streak
+    newStreak = existing.currentStreak + 1
+  } else {
+    // Gap — reset streak
+    newStreak = 1
+  }
+
+  const newLongest = Math.max(existing.longestStreak, newStreak)
+
+  await db
+    .update(streaks)
+    .set({ currentStreak: newStreak, longestStreak: newLongest, lastStarDate: today })
+    .where(eq(streaks.id, existing.id))
+
+  return { ...existing, currentStreak: newStreak, longestStreak: newLongest, lastStarDate: today }
+}
+
+export async function getStreaksForChild(childId: string) {
+  return db.query.streaks.findMany({
+    where: eq(streaks.childId, childId),
+  })
+}
+
 // ─── Star request actions (kid nudges parent) ─────────────────────────────────
 
 export async function createStarRequest(
@@ -85,6 +158,15 @@ export async function createStarRequest(
     .insert(starRequests)
     .values({ goalId, childId, message: message?.trim() || null })
     .returning()
+
+  // Get child name for notification
+  const child = await db.query.children.findFirst({
+    where: eq(children.id, childId),
+    columns: { name: true },
+  })
+  if (child) {
+    notifyParentOfNudge(childId, child.name, goal.name).catch(() => {})
+  }
 
   return request
 }
@@ -106,7 +188,11 @@ export async function approveStarRequest(requestId: string) {
     goalId: request.goalId,
     childId: request.childId,
     note: request.message || null,
+    quantity: 1,
   })
+
+  // Update streak
+  await updateStreak(request.goalId, request.childId)
 
   // Mark request as approved
   await db

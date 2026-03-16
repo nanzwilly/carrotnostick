@@ -137,6 +137,7 @@ export async function getChildrenForParent() {
             orderBy: (r, { desc }) => [desc(r.redeemedAt)],
             limit: 200,
           },
+          streaks: true,
         },
       },
     },

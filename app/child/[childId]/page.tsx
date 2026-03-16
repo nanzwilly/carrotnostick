@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { verifyChildPin, getSiblings, getChildByIdNoPin, saveBigHeadConfig } from "@/app/actions/children"
 import { createStarRequest } from "@/app/actions/stars"
+import { getShopItemsForChild, getShopBalance, purchaseShopItem } from "@/app/actions/shop"
+import type { RewardShopItem } from "@/lib/schema"
 import type { Child, Goal, StarEvent, RewardRedemption, StarRequest } from "@/lib/schema"
 import { useParams } from "next/navigation"
 import Link from "next/link"
@@ -25,15 +27,15 @@ type SiblingGoal = Goal & { starEvents: StarEvent[]; rewardRedemptions: RewardRe
 type SiblingWithGoals = Child & { goals: SiblingGoal[] }
 
 // Total unredeemed stars across all active goals
-function computeTotalStars(goals: Array<{ starEvents: unknown[]; rewardRedemptions: unknown[]; starThreshold: number }>) {
+function computeTotalStars(goals: Array<{ starEvents: Array<{ quantity?: number | null }>; rewardRedemptions: unknown[]; starThreshold: number }>) {
   return goals.reduce(
-    (sum, g) => sum + Math.max(0, g.starEvents.length - g.rewardRedemptions.length * g.starThreshold),
+    (sum, g) => sum + Math.max(0, g.starEvents.reduce((s, e) => s + (e.quantity ?? 1), 0) - g.rewardRedemptions.length * g.starThreshold),
     0
   )
 }
 
-function computeAwardedStars(goals: Array<{ starEvents: unknown[] }>) {
-  return goals.reduce((sum, g) => sum + g.starEvents.length, 0)
+function computeAwardedStars(goals: Array<{ starEvents: Array<{ quantity?: number | null }> }>) {
+  return goals.reduce((sum, g) => sum + g.starEvents.reduce((s, e) => s + (e.quantity ?? 1), 0), 0)
 }
 
 export default function ChildPage() {
@@ -104,6 +106,13 @@ export default function ChildPage() {
   const [siblings, setSiblings] = useState<SiblingWithGoals[] | null>(null)
   const [siblingsLoading, setSiblingsLoading] = useState(false)
 
+  // Shop
+  const [showShop, setShowShop] = useState(false)
+  const [shopItems, setShopItems] = useState<RewardShopItem[]>([])
+  const [shopBalance, setShopBalance] = useState(0)
+  const [shopLoading, setShopLoading] = useState(false)
+  const [purchaseMsg, setPurchaseMsg] = useState("")
+
   const applyChildSessionData = (c: ChildWithGoals) => {
     const alreadyNudged = new Set(
       c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
@@ -146,6 +155,39 @@ export default function ChildPage() {
       const data = await getSiblings(childId)
       setSiblings(data as SiblingWithGoals[])
       setSiblingsLoading(false)
+    }
+  }
+
+  const handleShowShop = async () => {
+    setShowShop(true)
+    setPurchaseMsg("")
+    setShopLoading(true)
+    try {
+      const [items, balance] = await Promise.all([
+        getShopItemsForChild(childId),
+        getShopBalance(childId),
+      ])
+      setShopItems(items)
+      setShopBalance(balance)
+    } finally {
+      setShopLoading(false)
+    }
+  }
+
+  const handlePurchase = async (itemId: string, itemName: string, cost: number) => {
+    if (shopBalance < cost) {
+      setPurchaseMsg("Not enough stars!")
+      return
+    }
+    setShopLoading(true)
+    try {
+      await purchaseShopItem(childId, itemId)
+      setShopBalance((b) => b - cost)
+      setPurchaseMsg(`🎉 You got ${itemName}! Show your parent!`)
+    } catch (err) {
+      setPurchaseMsg(err instanceof Error ? err.message : "Something went wrong")
+    } finally {
+      setShopLoading(false)
     }
   }
 
@@ -452,6 +494,69 @@ export default function ChildPage() {
           </div>
         )}
 
+        {/* ── Shop modal ────────────────────────────────────────────────────── */}
+        {showShop && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-2 pb-0">
+            <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">🛒 Reward Shop</h2>
+                <button
+                  onClick={() => setShowShop(false)}
+                  className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-4 py-3 text-center">
+                <p className="text-sm text-yellow-700">Your star balance</p>
+                <p className="text-3xl font-black text-yellow-600">{shopBalance} ⭐</p>
+              </div>
+
+              {purchaseMsg && (
+                <div className="bg-green-50 border border-green-200 rounded-2xl px-4 py-3 text-center text-sm text-green-700 font-medium">
+                  {purchaseMsg}
+                </div>
+              )}
+
+              {shopLoading ? (
+                <div className="text-center py-8 text-gray-400 text-sm">Loading…</div>
+              ) : shopItems.length === 0 ? (
+                <div className="text-center py-8 space-y-2">
+                  <div className="text-4xl">🏪</div>
+                  <p className="text-gray-500 text-sm">No items in the shop yet. Ask your parent to add some!</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {shopItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3"
+                    >
+                      <span className="text-2xl">{item.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-sm">{item.name}</p>
+                        <p className="text-xs text-gray-400">{item.starCost} ⭐</p>
+                      </div>
+                      <button
+                        onClick={() => handlePurchase(item.id, item.name, item.starCost)}
+                        disabled={shopLoading || shopBalance < item.starCost}
+                        className={`text-sm font-bold rounded-full px-4 py-2 transition-colors ${
+                          shopBalance >= item.starCost
+                            ? "bg-green-500 hover:bg-green-600 text-white"
+                            : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        Buy
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Goal cards */}
         {child.goals.length === 0 && (
           <div className="bg-white rounded-3xl p-8 text-center text-gray-400">
@@ -460,7 +565,7 @@ export default function ChildPage() {
         )}
 
         {child.goals.map((goal) => {
-          const totalStars = goal.starEvents.length
+          const totalStars = goal.starEvents.reduce((s, e) => s + (e.quantity ?? 1), 0)
           const redeemedStars = goal.rewardRedemptions.length * goal.starThreshold
           const currentStars = totalStars - redeemedStars
           const starsInCycle = Math.min(currentStars, goal.starThreshold)
@@ -485,13 +590,21 @@ export default function ChildPage() {
           )
         })}
 
-        {/* Competition leaderboard button */}
-        <button
-          onClick={handleShowLeaderboard}
-          className="w-full bg-white border-2 border-yellow-300 hover:bg-yellow-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
-        >
-          🏆 See how the competition is doing
-        </button>
+        {/* Shop + Leaderboard buttons */}
+        <div className="space-y-2">
+          <button
+            onClick={handleShowShop}
+            className="w-full bg-white border-2 border-green-300 hover:bg-green-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            🛒 Reward Shop
+          </button>
+          <button
+            onClick={handleShowLeaderboard}
+            className="w-full bg-white border-2 border-yellow-300 hover:bg-yellow-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            🏆 See how the competition is doing
+          </button>
+        </div>
 
         <p className="text-center text-xs text-gray-400 pb-4"><LogoText /></p>
       </div>

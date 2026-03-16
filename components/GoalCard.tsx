@@ -4,12 +4,13 @@ import { useState, useRef, useEffect } from "react"
 import { giveStar, redeemReward } from "@/app/actions/stars"
 import { archiveGoal, deleteGoal, updateGoal } from "@/app/actions/goals"
 import StarDisplay from "./StarDisplay"
-import type { Goal, StarEvent, RewardRedemption } from "@/lib/schema"
+import type { Goal, StarEvent, RewardRedemption, Streak } from "@/lib/schema"
 import { useRouter } from "next/navigation"
 
 type GoalWithEvents = Goal & {
   starEvents: StarEvent[]
   rewardRedemptions: RewardRedemption[]
+  streaks?: Streak[]
 }
 
 const GOAL_EMOJIS = ["🎯", "🍎", "📖", "🎨", "🏃", "🧹", "🌱", "💬", "🎵", "🤝", "🍕", "🦁", "🚀", "💪", "🌈"]
@@ -36,12 +37,14 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
   const [editEmoji, setEditEmoji] = useState(goal.emoji)
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState("")
+  const [starQty, setStarQty] = useState(1)
+  const [showQtyPicker, setShowQtyPicker] = useState(false)
 
   const buttonRef = useRef<HTMLButtonElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
 
-  // Calculate unredeemed stars (server-side values)
-  const totalStars = goal.starEvents.length
+  // Calculate unredeemed stars (server-side values, using quantity)
+  const totalStars = goal.starEvents.reduce((sum, e) => sum + (e.quantity ?? 1), 0)
   const redeemedCycles = goal.rewardRedemptions.length
   const redeemedStars = redeemedCycles * goal.starThreshold
   const currentStars = totalStars - redeemedStars
@@ -120,13 +123,15 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
 
     // Fire animation + optimistic counter update immediately — no waiting for the server
     flyStarToSlot(starsInCycle)
-    setOptimisticExtra((n) => n + 1)
+    setOptimisticExtra((n) => n + starQty)
 
     try {
-      const result = await giveStar(goal.id)
+      const result = await giveStar(goal.id, undefined, starQty)
       if (result.rewardReached) {
         setTimeout(() => setShowCelebration(true), 400)
       }
+      setStarQty(1)
+      setShowQtyPicker(false)
       router.refresh() // when this resolves, useEffect resets optimisticExtra to 0
     } finally {
       setLoading(false)
@@ -392,14 +397,42 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
             Reward: {goal.rewardDescription} · every {goal.starThreshold} ⭐
           </p>
           {!optRewardReached && (
-            <button
-              ref={buttonRef}
-              onClick={handleGiveStar}
-              disabled={loading}
-              className="bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-full px-4 py-2 text-sm transition-colors flex items-center gap-1.5 shadow-sm shrink-0 whitespace-nowrap"
-            >
-              {loading ? "…" : "⭐ Give star"}
-            </button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {showQtyPicker && (
+                <div className="flex items-center bg-gray-100 rounded-full">
+                  <button
+                    onClick={() => setStarQty((q) => Math.max(1, q - 1))}
+                    className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-700 font-bold text-sm"
+                  >
+                    −
+                  </button>
+                  <span className="text-sm font-bold text-gray-700 w-5 text-center">{starQty}</span>
+                  <button
+                    onClick={() => setStarQty((q) => Math.min(10, q + 1))}
+                    className="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-700 font-bold text-sm"
+                  >
+                    +
+                  </button>
+                </div>
+              )}
+              <button
+                ref={buttonRef}
+                onClick={handleGiveStar}
+                disabled={loading}
+                className="bg-yellow-400 hover:bg-yellow-500 disabled:opacity-50 text-white font-bold rounded-full px-4 py-2 text-sm transition-colors flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+              >
+                {loading ? "…" : `⭐ Give ${starQty > 1 ? starQty + " stars" : "star"}`}
+              </button>
+              {!showQtyPicker && (
+                <button
+                  onClick={() => setShowQtyPicker(true)}
+                  className="text-gray-400 hover:text-gray-600 text-xs underline"
+                  title="Give multiple stars"
+                >
+                  ×N
+                </button>
+              )}
+            </div>
           )}
         </div>
 
@@ -409,6 +442,20 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
           total={goal.starThreshold}
           rewardDescription={goal.rewardDescription}
         />
+
+        {/* Streak display */}
+        {goal.streaks && goal.streaks.length > 0 && goal.streaks[0].currentStreak > 1 && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="bg-orange-100 text-orange-600 font-bold rounded-full px-2.5 py-1">
+              🔥 {goal.streaks[0].currentStreak} day streak!
+            </span>
+            {goal.streaks[0].longestStreak > goal.streaks[0].currentStreak && (
+              <span className="text-gray-400">
+                Best: {goal.streaks[0].longestStreak} days
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Reward reached banner */}
         {optRewardReached && !showCelebration && (
