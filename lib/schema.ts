@@ -224,6 +224,22 @@ export const shopPurchases = pgTable("shop_purchases", {
   index("idx_shop_purchases_child_id").on(t.childId),
 ])
 
+// ─── Child Wishlist ──────────────────────────────────────────────────────────
+
+export const childWishlistItems = pgTable("child_wishlist_items", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  childId: uuid("child_id")
+    .notNull()
+    .references(() => children.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  emoji: text("emoji").notNull().default("🎁"),
+  status: text("status").notNull().default("pending"), // pending | approved | dismissed
+  approvedStarCost: integer("approved_star_cost"), // set by parent when approving
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [
+  index("idx_child_wishlist_items_child_id").on(t.childId),
+])
+
 // ─── Notifications ───────────────────────────────────────────────────────────
 
 export const notifications = pgTable("notifications", {
@@ -250,6 +266,7 @@ export const childrenRelations = relations(children, ({ many }) => ({
   streaks: many(streaks),
   shopPurchases: many(shopPurchases),
   notifications: many(notifications),
+  wishlistItems: many(childWishlistItems),
 }))
 
 export const goalsRelations = relations(goals, ({ one, many }) => ({
@@ -296,6 +313,10 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   goal: one(goals, { fields: [notifications.goalId], references: [goals.id] }),
 }))
 
+export const childWishlistItemsRelations = relations(childWishlistItems, ({ one }) => ({
+  child: one(children, { fields: [childWishlistItems.childId], references: [children.id] }),
+}))
+
 export const coParentInvitesRelations = relations(coParentInvites, ({ one }) => ({
   owner: one(users, { fields: [coParentInvites.ownerId], references: [users.id] }),
 }))
@@ -318,3 +339,4 @@ export type Streak = typeof streaks.$inferSelect
 export type RewardShopItem = typeof rewardShopItems.$inferSelect
 export type ShopPurchase = typeof shopPurchases.$inferSelect
 export type Notification = typeof notifications.$inferSelect
+export type ChildWishlistItem = typeof childWishlistItems.$inferSelect

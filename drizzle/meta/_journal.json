@@ -71,6 +71,13 @@
       "when": 1773643414682,
       "tag": "0009_giant_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1773651261344,
+      "tag": "0010_robust_sphinx",
+      "breakpoints": true
     }
   ]
 }

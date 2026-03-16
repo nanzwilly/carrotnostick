@@ -4,7 +4,8 @@ import { useState, useEffect, useRef } from "react"
 import { verifyChildPin, getSiblings, getChildByIdNoPin, saveBigHeadConfig } from "@/app/actions/children"
 import { createStarRequest } from "@/app/actions/stars"
 import { getShopItemsForChild, getShopBalance, purchaseShopItem } from "@/app/actions/shop"
-import type { RewardShopItem } from "@/lib/schema"
+import { getChildWishlist, addWishlistItem, removeWishlistItem } from "@/app/actions/wishlist"
+import type { RewardShopItem, ChildWishlistItem } from "@/lib/schema"
 import type { Child, Goal, StarEvent, RewardRedemption, StarRequest } from "@/lib/schema"
 import { useParams } from "next/navigation"
 import Link from "next/link"
@@ -113,6 +114,13 @@ export default function ChildPage() {
   const [shopLoading, setShopLoading] = useState(false)
   const [purchaseMsg, setPurchaseMsg] = useState("")
 
+  // Wishlist
+  const [showWishlist, setShowWishlist] = useState(false)
+  const [wishlistItems, setWishlistItems] = useState<ChildWishlistItem[]>([])
+  const [wishlistLoading, setWishlistLoading] = useState(false)
+  const [wishName, setWishName] = useState("")
+  const [wishEmoji, setWishEmoji] = useState("🎁")
+
   const applyChildSessionData = (c: ChildWithGoals) => {
     const alreadyNudged = new Set(
       c.goals.filter((g) => g.starRequests.length > 0).map((g) => g.id)
@@ -188,6 +196,40 @@ export default function ChildPage() {
       setPurchaseMsg(err instanceof Error ? err.message : "Something went wrong")
     } finally {
       setShopLoading(false)
+    }
+  }
+
+  const handleShowWishlist = async () => {
+    setShowWishlist(true)
+    setWishlistLoading(true)
+    try {
+      const items = await getChildWishlist(childId)
+      setWishlistItems(items)
+    } finally {
+      setWishlistLoading(false)
+    }
+  }
+
+  const handleAddWish = async () => {
+    if (!wishName.trim()) return
+    setWishlistLoading(true)
+    try {
+      const item = await addWishlistItem(childId, wishName, wishEmoji)
+      setWishlistItems((prev) => [item, ...prev])
+      setWishName("")
+      setWishEmoji("🎁")
+    } finally {
+      setWishlistLoading(false)
+    }
+  }
+
+  const handleRemoveWish = async (itemId: string) => {
+    setWishlistLoading(true)
+    try {
+      await removeWishlistItem(childId, itemId)
+      setWishlistItems((prev) => prev.filter((i) => i.id !== itemId))
+    } finally {
+      setWishlistLoading(false)
     }
   }
 
@@ -557,6 +599,110 @@ export default function ChildPage() {
           </div>
         )}
 
+        {/* ── Wishlist modal ─────────────────────────────────────────────── */}
+        {showWishlist && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-2 pb-0">
+            <div className="bg-white rounded-t-3xl w-full max-w-sm p-6 space-y-5 max-h-[80vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-bold text-gray-900">💫 My Wishes</h2>
+                <button
+                  onClick={() => setShowWishlist(false)}
+                  className="text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500">Tell your parent what rewards you&apos;d love!</p>
+
+              {/* Add wish form */}
+              <div className="bg-purple-50 border border-purple-200 rounded-2xl p-4 space-y-3">
+                <div className="flex gap-2 flex-wrap">
+                  {["🎁", "🍦", "🎮", "📱", "🎬", "🍕", "🧸", "⚽", "🎵", "🎢"].map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => setWishEmoji(e)}
+                      className={`text-lg p-1 rounded-lg transition-all ${
+                        wishEmoji === e ? "bg-purple-200 ring-2 ring-purple-400 scale-110" : "hover:bg-purple-100"
+                      }`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={wishName}
+                    onChange={(e) => setWishName(e.target.value)}
+                    placeholder="I wish for..."
+                    maxLength={100}
+                    className="flex-1 border border-purple-200 rounded-xl px-3 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  />
+                  <button
+                    onClick={handleAddWish}
+                    disabled={wishlistLoading || !wishName.trim()}
+                    className="bg-purple-500 hover:bg-purple-600 disabled:opacity-40 text-white font-bold rounded-xl px-4 py-2 text-sm transition-colors"
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Wish list */}
+              {wishlistLoading && wishlistItems.length === 0 ? (
+                <div className="text-center py-6 text-gray-400 text-sm">Loading...</div>
+              ) : wishlistItems.length === 0 ? (
+                <div className="text-center py-6 space-y-2">
+                  <div className="text-4xl">🌟</div>
+                  <p className="text-gray-500 text-sm">No wishes yet. Add something you&apos;d love!</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {wishlistItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${
+                        item.status === "approved"
+                          ? "bg-green-50 border border-green-200"
+                          : item.status === "dismissed"
+                          ? "bg-gray-50 border border-gray-200 opacity-60"
+                          : "bg-gray-50"
+                      }`}
+                    >
+                      <span className="text-2xl">{item.emoji}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-sm">{item.name}</p>
+                        {item.status === "approved" && (
+                          <p className="text-xs text-green-600 font-medium">
+                            Approved! {item.approvedStarCost} ⭐ in the shop
+                          </p>
+                        )}
+                        {item.status === "dismissed" && (
+                          <p className="text-xs text-gray-400">Maybe next time</p>
+                        )}
+                        {item.status === "pending" && (
+                          <p className="text-xs text-purple-500">Waiting for parent...</p>
+                        )}
+                      </div>
+                      {item.status === "pending" && (
+                        <button
+                          onClick={() => handleRemoveWish(item.id)}
+                          disabled={wishlistLoading}
+                          className="text-gray-400 hover:text-red-400 text-sm transition-colors"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Goal cards */}
         {child.goals.length === 0 && (
           <div className="bg-white rounded-3xl p-8 text-center text-gray-400">
@@ -590,13 +736,19 @@ export default function ChildPage() {
           )
         })}
 
-        {/* Shop + Leaderboard buttons */}
+        {/* Shop + Wishlist + Leaderboard buttons */}
         <div className="space-y-2">
           <button
             onClick={handleShowShop}
             className="w-full bg-white border-2 border-green-300 hover:bg-green-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
           >
             🛒 Reward Shop
+          </button>
+          <button
+            onClick={handleShowWishlist}
+            className="w-full bg-white border-2 border-purple-300 hover:bg-purple-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
+          >
+            💫 My Wishes
           </button>
           <button
             onClick={handleShowLeaderboard}

@@ -1,9 +1,11 @@
 import { getShopItems } from "@/app/actions/shop"
+import { getWishlistsForParent } from "@/app/actions/wishlist"
 import Link from "next/link"
 import ShopManager from "@/components/ShopManager"
+import WishlistReview from "@/components/WishlistReview"
 
 export default async function ShopPage() {
-  const items = await getShopItems()
+  const [items, wishlists] = await Promise.all([getShopItems(), getWishlistsForParent()])
 
   return (
     <div className="space-y-6">
@@ -20,6 +22,9 @@ export default async function ShopPage() {
       <p className="text-sm text-gray-500">
         Create rewards that your children can &quot;buy&quot; with their earned stars. Stars earned from any goal count toward the shop balance.
       </p>
+
+      {/* Child wishlists — pending approval */}
+      <WishlistReview wishlists={wishlists} />
 
       <ShopManager initialItems={items} />
     </div>
