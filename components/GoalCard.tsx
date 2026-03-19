@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { giveStar, redeemReward } from "@/app/actions/stars"
+import { giveStar, redeemReward, earlyRedeemReward } from "@/app/actions/stars"
 import { archiveGoal, deleteGoal, updateGoal } from "@/app/actions/goals"
 import StarDisplay from "./StarDisplay"
 import type { Goal, StarEvent, RewardRedemption, Streak } from "@/lib/schema"
@@ -39,6 +39,7 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
   const [editError, setEditError] = useState("")
   const [starQty, setStarQty] = useState(1)
   const [showQtyPicker, setShowQtyPicker] = useState(false)
+  const [confirmEarlyRedeem, setConfirmEarlyRedeem] = useState(false)
 
   const buttonRef = useRef<HTMLButtonElement>(null)
   const cardRef = useRef<HTMLDivElement>(null)
@@ -46,7 +47,7 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
   // Calculate unredeemed stars (server-side values, using quantity)
   const totalStars = goal.starEvents.reduce((sum, e) => sum + (e.quantity ?? 1), 0)
   const redeemedCycles = goal.rewardRedemptions.length
-  const redeemedStars = redeemedCycles * goal.starThreshold
+  const redeemedStars = goal.rewardRedemptions.reduce((sum, r) => sum + (r.starsUsed ?? goal.starThreshold), 0)
   const currentStars = totalStars - redeemedStars
   const starsInCycle = currentStars % goal.starThreshold || (currentStars > 0 && currentStars >= goal.starThreshold ? goal.starThreshold : currentStars)
   const rewardReached = currentStars >= goal.starThreshold
@@ -133,6 +134,17 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
       setStarQty(1)
       setShowQtyPicker(false)
       router.refresh() // when this resolves, useEffect resets optimisticExtra to 0
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEarlyRedeem = async () => {
+    setLoading(true)
+    setConfirmEarlyRedeem(false)
+    try {
+      await earlyRedeemReward(goal.id)
+      router.refresh()
     } finally {
       setLoading(false)
     }
@@ -228,6 +240,36 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
                 className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-2xl py-3 transition-colors text-sm"
               >
                 Later
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Early redeem confirmation ──────────────────────────────────────── */}
+      {confirmEarlyRedeem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-3xl shadow-2xl p-6 max-w-xs w-full text-center space-y-4">
+            <div className="text-4xl">🔄</div>
+            <div className="space-y-1">
+              <p className="text-lg font-black text-gray-900">Redeem early?</p>
+              <p className="text-gray-500 text-sm">
+                This will redeem <span className="font-bold text-orange-500">{optCurrentStars} star{optCurrentStars !== 1 ? "s" : ""}</span> for &quot;{goal.name}&quot; and reset progress to 0.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmEarlyRedeem(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold rounded-2xl py-3 transition-colors text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleEarlyRedeem}
+                disabled={loading}
+                className="flex-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold rounded-2xl py-3 transition-colors text-sm"
+              >
+                {loading ? "…" : "Redeem & Reset"}
               </button>
             </div>
           </div>
@@ -352,6 +394,14 @@ export default function GoalCard({ goal }: { goal: GoalWithEvents }) {
                   >
                     ✏️ Edit
                   </button>
+                  {optCurrentStars > 0 && !optRewardReached && (
+                    <button
+                      onClick={() => { setMenuOpen(false); setConfirmEarlyRedeem(true) }}
+                      className="w-full text-left px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      🔄 Redeem &amp; reset
+                    </button>
+                  )}
                   <button
                     onClick={handleArchive}
                     disabled={loading}

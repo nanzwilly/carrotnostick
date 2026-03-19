@@ -82,6 +82,43 @@ export async function redeemReward(goalId: string) {
   return goal
 }
 
+export async function earlyRedeemReward(goalId: string) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorised")
+
+  const goal = await db.query.goals.findFirst({
+    where: eq(goals.id, goalId),
+    with: { child: true },
+  })
+  if (!goal || !(await canAccessFamily(session.user.id, goal.child.parentId)))
+    throw new Error("Unauthorised")
+
+  // Calculate current unredeemed stars using actual starsUsed
+  const [totalStars] = await db
+    .select({ total: sum(starEvents.quantity) })
+    .from(starEvents)
+    .where(eq(starEvents.goalId, goalId))
+
+  const [totalRedeemed] = await db
+    .select({ total: sum(rewardRedemptions.starsUsed) })
+    .from(rewardRedemptions)
+    .where(eq(rewardRedemptions.goalId, goalId))
+
+  const unredeemedStars = Number(totalStars?.total ?? 0) - Number(totalRedeemed?.total ?? 0)
+
+  if (unredeemedStars < 1) throw new Error("No stars to redeem")
+
+  // Record a redemption that uses only the current unredeemed stars
+  await db.insert(rewardRedemptions).values({
+    goalId,
+    childId: goal.childId,
+    starsUsed: unredeemedStars,
+  })
+
+  revalidatePath("/dashboard")
+  return { starsRedeemed: unredeemedStars, goal }
+}
+
 // ─── Streak tracking ────────────────────────────────────────────────────────
 
 async function updateStreak(goalId: string, childId: string) {

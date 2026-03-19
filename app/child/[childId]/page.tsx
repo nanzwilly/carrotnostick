@@ -29,9 +29,9 @@ type SiblingGoal = Goal & { starEvents: StarEvent[]; rewardRedemptions: RewardRe
 type SiblingWithGoals = Child & { goals: SiblingGoal[] }
 
 // Total unredeemed stars across all active goals
-function computeTotalStars(goals: Array<{ starEvents: Array<{ quantity?: number | null }>; rewardRedemptions: unknown[]; starThreshold: number }>) {
+function computeTotalStars(goals: Array<{ starEvents: Array<{ quantity?: number | null }>; rewardRedemptions: Array<{ starsUsed?: number | null }>; starThreshold: number }>) {
   return goals.reduce(
-    (sum, g) => sum + Math.max(0, g.starEvents.reduce((s, e) => s + (e.quantity ?? 1), 0) - g.rewardRedemptions.length * g.starThreshold),
+    (sum, g) => sum + Math.max(0, g.starEvents.reduce((s, e) => s + (e.quantity ?? 1), 0) - g.rewardRedemptions.reduce((s, r) => s + (r.starsUsed ?? g.starThreshold), 0)),
     0
   )
 }
@@ -734,7 +734,7 @@ export default function ChildPage() {
 
         {child.goals.map((goal) => {
           const totalStars = goal.starEvents.reduce((s, e) => s + (e.quantity ?? 1), 0)
-          const redeemedStars = goal.rewardRedemptions.length * goal.starThreshold
+          const redeemedStars = goal.rewardRedemptions.reduce((s: number, r: RewardRedemption) => s + (r.starsUsed ?? goal.starThreshold), 0)
           const currentStars = totalStars - redeemedStars
           const starsInCycle = Math.min(currentStars, goal.starThreshold)
           const remaining = goal.starThreshold - starsInCycle
