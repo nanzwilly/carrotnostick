@@ -2,7 +2,7 @@
 
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
-import { rewardShopItems, shopPurchases, starEvents, children } from "@/lib/schema"
+import { rewardShopItems, shopPurchases, starEvents, rewardRedemptions, children } from "@/lib/schema"
 import { eq, and, sum } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { getOwnerIdForUser } from "@/lib/family"
@@ -96,13 +96,19 @@ export async function getShopBalance(childId: string): Promise<number> {
     .from(starEvents)
     .where(eq(starEvents.childId, childId))
 
+  // Total stars consumed by goal redemptions (including early redeems)
+  const [redeemed] = await db
+    .select({ total: sum(rewardRedemptions.starsUsed) })
+    .from(rewardRedemptions)
+    .where(eq(rewardRedemptions.childId, childId))
+
   // Total stars spent in shop
   const [spent] = await db
     .select({ total: sum(shopPurchases.starCost) })
     .from(shopPurchases)
     .where(eq(shopPurchases.childId, childId))
 
-  return Number(earned?.total ?? 0) - Number(spent?.total ?? 0)
+  return Number(earned?.total ?? 0) - Number(redeemed?.total ?? 0) - Number(spent?.total ?? 0)
 }
 
 export async function getShopItemsForChild(childId: string) {
