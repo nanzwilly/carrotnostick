@@ -709,6 +709,34 @@ export default function ChildPage() {
           </div>
         )}
 
+        {/* Quick action buttons */}
+        <div className="flex gap-2 flex-wrap justify-center">
+          <button
+            onClick={handleShowShop}
+            className="bg-white border border-green-200 hover:bg-green-50 text-gray-700 font-semibold rounded-full px-3 py-2 text-xs transition-colors"
+          >
+            🛒 Shop
+          </button>
+          <button
+            onClick={handleShowWishlist}
+            className="bg-white border border-purple-200 hover:bg-purple-50 text-gray-700 font-semibold rounded-full px-3 py-2 text-xs transition-colors"
+          >
+            💫 Wishes
+          </button>
+          <button
+            onClick={() => setShowGame(true)}
+            className="bg-white border border-pink-200 hover:bg-pink-50 text-gray-700 font-semibold rounded-full px-3 py-2 text-xs transition-colors"
+          >
+            🎮 Hangman
+          </button>
+          <button
+            onClick={handleShowLeaderboard}
+            className="bg-white border border-yellow-200 hover:bg-yellow-50 text-gray-700 font-semibold rounded-full px-3 py-2 text-xs transition-colors"
+          >
+            🏆 Leaderboard
+          </button>
+        </div>
+
         {/* ── Hangman game modal ─────────────────────────────────────────── */}
         {showGame && (
           <HangmanGame color={child.color} onClose={() => setShowGame(false)} />
@@ -758,33 +786,7 @@ export default function ChildPage() {
           )
         })}
 
-        {/* Shop + Wishlist + Leaderboard buttons */}
-        <div className="space-y-2">
-          <button
-            onClick={handleShowShop}
-            className="w-full bg-white border-2 border-green-300 hover:bg-green-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            🛒 Reward Shop
-          </button>
-          <button
-            onClick={handleShowWishlist}
-            className="w-full bg-white border-2 border-purple-300 hover:bg-purple-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            💫 My Wishes
-          </button>
-          <button
-            onClick={() => setShowGame(true)}
-            className="w-full bg-white border-2 border-pink-300 hover:bg-pink-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            🎮 Play Hangman
-          </button>
-          <button
-            onClick={handleShowLeaderboard}
-            className="w-full bg-white border-2 border-yellow-300 hover:bg-yellow-50 text-gray-700 font-bold rounded-2xl py-3 text-sm transition-colors flex items-center justify-center gap-2"
-          >
-            🏆 See how the competition is doing
-          </button>
-        </div>
+        {/* Footer */}
 
         <p className="text-center text-xs text-gray-400 pb-4"><LogoText /></p>
       </div>
