@@ -149,10 +149,6 @@ export default function LoginForm({
         . {"< "}2 minutes to get going.
       </p>
       <p className="text-center text-xs text-gray-400">
-        100% free. No credit card needed.
-      </p>
-
-      <p className="text-center text-xs text-gray-400">
         Kids join using their name and a 6-digit PIN - no account needed.
       </p>
     </div>

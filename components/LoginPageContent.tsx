@@ -37,7 +37,7 @@ export default function LoginPageContent() {
         Make kids build good habits, without punishments
       </h2>
       <p className="text-sm text-orange-500 mt-1">
-        100% free. Sign up now!
+        100% free. No credit card needed. Sign up now!
       </p>
 
       {/* How it works — vertical list with icons */}
