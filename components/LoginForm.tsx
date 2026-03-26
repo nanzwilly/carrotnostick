@@ -149,10 +149,7 @@ export default function LoginForm({
         . {"< "}2 minutes to get going.
       </p>
       <p className="text-center text-xs text-gray-400">
-        Free while we are in early access.{" "}
-        <Link href="/pricing" className="text-orange-500 font-semibold hover:underline">
-          See future pricing plans
-        </Link>
+        100% free. No credit card needed.
       </p>
 
       <p className="text-center text-xs text-gray-400">
