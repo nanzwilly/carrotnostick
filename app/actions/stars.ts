@@ -3,7 +3,7 @@
 import { auth } from "@/auth"
 import { db } from "@/lib/db"
 import { starEvents, rewardRedemptions, goals, children, starRequests, streaks } from "@/lib/schema"
-import { eq, and, count, sum } from "drizzle-orm"
+import { eq, and, sum } from "drizzle-orm"
 import { revalidatePath } from "next/cache"
 import { canAccessFamily } from "@/lib/family"
 import { notifyParentOfNudge, notifyStreakMilestone } from "./notifications"
@@ -31,18 +31,18 @@ export async function giveStar(goalId: string, note?: string, quantity: number =
     quantity: qty,
   })
 
-  // Count unredeemed stars for this goal (using sum of quantities)
+  // Count unredeemed stars for this goal (using sum of quantities and actual starsUsed)
   const [totalStars] = await db
     .select({ total: sum(starEvents.quantity) })
     .from(starEvents)
     .where(eq(starEvents.goalId, goalId))
 
   const [totalRedeemed] = await db
-    .select({ count: count() })
+    .select({ total: sum(rewardRedemptions.starsUsed) })
     .from(rewardRedemptions)
     .where(eq(rewardRedemptions.goalId, goalId))
 
-  const redeemedStars = (totalRedeemed?.count ?? 0) * goal.starThreshold
+  const redeemedStars = Number(totalRedeemed?.total ?? 0)
   const unredeemedStars = Number(totalStars?.total ?? 0) - redeemedStars
   const rewardReached = unredeemedStars >= goal.starThreshold
 
