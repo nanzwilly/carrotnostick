@@ -7,6 +7,12 @@ Live at: https://www.carrotnostick.com
 Repo: https://github.com/nanzwilly/carrotnostick  
 Deployed via: Vercel (auto-deploy on push to `master`)
 
+## Git Account
+Push as GitHub user: **`nanzwilly`** (nanzwilly@gmail.com).
+If a push is rejected with a different username (e.g. `nancy-df`), the
+credential manager is using the wrong account — tell the user rather
+than retrying blindly.
+
 ---
 
 ## Tech Stack
